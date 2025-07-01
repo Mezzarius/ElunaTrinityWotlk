@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,7 +58,7 @@ namespace Movement
 
             // Masks
             Mask_Final_Facing   = Final_Point | Final_Target | Final_Angle,
-            // animation ids stored here, see AnimType enum, used with Animation flag
+            // animation ids stored here, see AnimTier enum, used with Animation flag
             Mask_Animations     = 0xFF,
             // flags that shouldn't be appended into SMSG_MONSTER_MOVE\SMSG_MONSTER_MOVE_TRANSPORT packet, should be more probably
             Mask_No_Monster_Move = Mask_Final_Facing | Mask_Animations | Done,
@@ -74,7 +73,6 @@ namespace Movement
 
         MoveSplineFlag() { raw() = 0; }
         MoveSplineFlag(uint32 f) { raw() = f; }
-        MoveSplineFlag(MoveSplineFlag const& f) { raw() = f.raw(); }
 
         // Constant interface
 
@@ -82,7 +80,6 @@ namespace Movement
         bool isLinear() const { return !isSmooth(); }
         bool isFacing() const { return (raw() & Mask_Final_Facing) != 0; }
 
-        uint8 getAnimationId() const { return animId; }
         bool hasAllFlags(uint32 f) const { return (raw() & f) == f; }
         bool hasFlag(uint32 f) const { return (raw() & f) != 0; }
         uint32 operator & (uint32 f) const { return (raw() & f); }
@@ -105,7 +102,7 @@ namespace Movement
         void EnableTransportEnter() { raw() = (raw() & ~TransportExit) | TransportEnter; }
         void EnableTransportExit() { raw() = (raw() & ~TransportEnter) | TransportExit; }
 
-        uint8 animId              : 8;
+        uint8 animTier;
         bool done                : 1;
         bool falling             : 1;
         bool no_spline           : 1;

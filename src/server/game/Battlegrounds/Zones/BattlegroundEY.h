@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -259,8 +258,8 @@ enum BG_EY_BroadcastTexts
     BG_EY_TEXT_ALLIANCE_LOST_BLOOD_ELF_TOWER    = 17831,
     BG_EY_TEXT_HORDE_LOST_BLOOD_ELF_TOWER       = 17832,
 
-    BG_EY_TEXT_ALLIANCE_TAKEN_DRAENEI_RUINS     = 17826,
-    BG_EY_TEXT_HORDE_TAKEN_DRAENEI_RUINS        = 17827,
+    BG_EY_TEXT_ALLIANCE_TAKEN_DRAENEI_RUINS     = 17827,
+    BG_EY_TEXT_HORDE_TAKEN_DRAENEI_RUINS        = 17826,
     BG_EY_TEXT_ALLIANCE_LOST_DRAENEI_RUINS      = 17833,
     BG_EY_TEXT_HORDE_LOST_DRAENEI_RUINS         = 17834,
 
@@ -371,9 +370,9 @@ struct BattlegroundEYScore final : public BattlegroundScore
             }
         }
 
-        void BuildObjectivesBlock(WorldPacket& data) final override;
+        void BuildObjectivesBlock(WorldPackets::Battleground::PVPLogData_Player& playerData) override;
 
-        uint32 GetAttr1() const final override { return FlagCaptures; }
+        uint32 GetAttr1() const override { return FlagCaptures; }
 
         uint32 FlagCaptures;
 };

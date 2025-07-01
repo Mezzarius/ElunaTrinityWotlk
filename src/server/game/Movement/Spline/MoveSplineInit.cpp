@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,6 +16,7 @@
  */
 
 #include "MoveSplineInit.h"
+#include "Creature.h"
 #include "MoveSpline.h"
 #include "MovementPacketBuilder.h"
 #include "Unit.h"
@@ -61,7 +61,7 @@ namespace Movement
         MoveSpline& move_spline = *unit->movespline;
 
         // Elevators also use MOVEMENTFLAG_ONTRANSPORT but we do not keep track of their position changes (movementInfo.transport.guid is 0 in that case)
-        bool transport = unit->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && unit->GetTransGUID();
+        bool transport = unit->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && !unit->GetTransGUID().IsEmpty();
         Location real_position;
         // there is a big chance that current position is unknown if current state is not finalized, need compute it
         // this also allows CalculatePath spline position and update map position in much greater intervals
@@ -89,6 +89,7 @@ namespace Movement
         // corrent first vertex
         args.path[0] = real_position;
         args.initialOrientation = real_position.orientation;
+        args.flags.enter_cycle = args.flags.cyclic;
         move_spline.onTransport = transport;
 
         uint32 moveFlags = unit->m_movementInfo.GetMovementFlags();
@@ -113,6 +114,9 @@ namespace Movement
                 moveFlagsForSpeed &= ~MOVEMENTFLAG_WALKING;
 
             args.velocity = unit->GetSpeed(SelectSpeedType(moveFlagsForSpeed));
+            if (Creature* creature = unit->ToCreature())
+                if (creature->HasSearchedAssistance())
+                    args.velocity *= 0.66f;
         }
 
         // limit the speed in the same way the client does
@@ -208,8 +212,13 @@ namespace Movement
 
     void MoveSplineInit::SetFacing(Unit const* target)
     {
+        SetFacing(target->GetGUID());
+    }
+
+    void MoveSplineInit::SetFacing(ObjectGuid const& target)
+    {
         args.flags.EnableFacingTarget();
-        args.facing.target = target->GetGUID().GetRawValue();
+        args.facing.target = target.GetRawValue();
     }
 
     void MoveSplineInit::SetFacing(float angle)
@@ -255,6 +264,11 @@ namespace Movement
         args.path.resize(2);
         TransportPathTransform transform(unit, args.TransformForTransport);
         args.path[1] = transform(dest);
+    }
+
+    void MoveSplineInit::SetFall()
+    {
+        args.flags.EnableFalling();
     }
 
     Vector3 TransportPathTransform::operator()(Vector3 input)

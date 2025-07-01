@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,6 +22,7 @@
 #include "Define.h"
 #include <deque>
 #include <iosfwd>
+#include <string>
 
 class ByteBuffer;
 struct FactionTemplateEntry;
@@ -29,23 +30,23 @@ struct FactionTemplateEntry;
 class TC_GAME_API PlayerTaxi
 {
     public:
-        PlayerTaxi() : m_flightMasterFactionId(0) { m_taximask.fill(0); }
+        PlayerTaxi() : m_flightMasterFactionId(0) { }
         ~PlayerTaxi() { }
         // Nodes
         void InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint8 level);
-        void LoadTaxiMask(std::string const& data);
+        bool LoadTaxiMask(std::string const& data);
 
         bool IsTaximaskNodeKnown(uint32 nodeidx) const
         {
-            uint8  field   = uint8((nodeidx - 1) / 32);
-            uint32 submask = 1 << ((nodeidx-1) % 32);
-            return (m_taximask[field] & submask) == submask;
+            uint32 field = uint32((nodeidx - 1) / (sizeof(TaxiMask::value_type) * 8));
+            TaxiMask::value_type submask = TaxiMask::value_type(1 << ((nodeidx - 1) % (sizeof(TaxiMask::value_type) * 8)));
+            return (m_taximask[field] & submask) != 0;
         }
         bool SetTaximaskNode(uint32 nodeidx)
         {
-            uint8  field   = uint8((nodeidx - 1) / 32);
-            uint32 submask = 1 << ((nodeidx - 1) % 32);
-            if ((m_taximask[field] & submask) != submask)
+            uint32 field = uint32((nodeidx - 1) / (sizeof(TaxiMask::value_type) * 8));
+            TaxiMask::value_type submask = TaxiMask::value_type(1 << ((nodeidx - 1) % (sizeof(TaxiMask::value_type) * 8)));
+            if ((m_taximask[field] & submask) == 0)
             {
                 m_taximask[field] |= submask;
                 return true;
@@ -56,7 +57,7 @@ class TC_GAME_API PlayerTaxi
         void AppendTaximaskTo(ByteBuffer& data, bool all);
 
         // Destinations
-        bool LoadTaxiDestinationsFromString(std::string const& values, uint32 team);
+        [[nodiscard]] bool LoadTaxiDestinationsFromString(std::string const& values, uint32 team);
         std::string SaveTaxiDestinationsToString();
 
         void ClearTaxiDestinations() { m_TaxiDestinations.clear(); }

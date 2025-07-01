@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -70,18 +70,12 @@ class instance_magisters_terrace : public InstanceMapScript
 
         struct instance_magisters_terrace_InstanceMapScript : public InstanceScript
         {
-            instance_magisters_terrace_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
+            instance_magisters_terrace_InstanceMapScript(InstanceMap* map) : InstanceScript(map), _delrissaDeathCount(0)
             {
                 SetHeaders(DataHeader);
                 SetBossNumber(EncounterCount);
                 LoadObjectData(creatureData, gameObjectData);
                 LoadDoorData(doorData);
-                Initialize();
-            }
-
-            void Initialize() override
-            {
-                _delrissaDeathCount = 0;
             }
 
             uint32 GetData(uint32 type) const override
@@ -125,6 +119,7 @@ class instance_magisters_terrace : public InstanceMapScript
                     case NPC_SUNBLADE_BLOOD_KNIGHT:
                         if (creature->GetDistance(KaelthasTrashGroupDistanceComparisonPos) < 10.0f)
                             _kaelthasPreTrashGUIDs.insert(creature->GetGUID());
+                        break;
                     default:
                         break;
                 }
@@ -164,7 +159,7 @@ class instance_magisters_terrace : public InstanceMapScript
                 {
                     case GO_ESCAPE_ORB:
                         if (GetBossState(DATA_KAELTHAS_SUNSTRIDER) == DONE)
-                            go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+                            go->RemoveFlag(GO_FLAG_NOT_SELECTABLE);
                         break;
                     default:
                         break;
@@ -183,13 +178,7 @@ class instance_magisters_terrace : public InstanceMapScript
                 _events.Update(diff);
 
                 if (_events.ExecuteEvent() == EVENT_SPAWN_KALECGOS)
-                {
-                    if (Creature* kalecgos = instance->SummonCreature(NPC_KALECGOS, KalecgosSpawnPos))
-                    {
-                        kalecgos->GetMotionMaster()->MovePath(PATH_KALECGOS_FLIGHT, false);
-                        kalecgos->AI()->Talk(SAY_KALECGOS_SPAWN);
-                    }
-                }
+                    instance->SummonCreature(NPC_KALECGOS, KalecgosSpawnPos);
             }
 
             bool SetBossState(uint32 type, EncounterState state) override
@@ -206,7 +195,7 @@ class instance_magisters_terrace : public InstanceMapScript
                     case DATA_KAELTHAS_SUNSTRIDER:
                         if (state == DONE)
                             if (GameObject* orb = GetGameObject(DATA_ESCAPE_ORB))
-                                orb->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+                                orb->RemoveFlag(GO_FLAG_NOT_SELECTABLE);
                         break;
                     default:
                         break;

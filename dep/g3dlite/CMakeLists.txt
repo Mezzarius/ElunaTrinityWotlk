@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+# This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -59,6 +59,12 @@ add_library(g3dlib STATIC ${g3dlib_STAT_SRCS})
 target_include_directories(g3dlib
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+if((CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT NOJEM) OR TSAN)
+  target_compile_definitions(g3dlib
+    PRIVATE
+      NO_BUFFERPOOL)
+endif()
 
 target_link_libraries(g3dlib
   PRIVATE

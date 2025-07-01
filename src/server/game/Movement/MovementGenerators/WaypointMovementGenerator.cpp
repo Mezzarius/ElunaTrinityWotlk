@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -56,6 +55,10 @@ void WaypointMovementGenerator<Creature>::Pause(uint32 timer/* = 0*/)
 {
     if (timer)
     {
+        // Don't try to paused an already paused generator
+        if (HasFlag(MOVEMENTGENERATOR_FLAG_PAUSED))
+            return;
+
         AddFlag(MOVEMENTGENERATOR_FLAG_TIMED_PAUSED);
         _nextMoveTime.Reset(timer);
         RemoveFlag(MOVEMENTGENERATOR_FLAG_PAUSED);
@@ -108,17 +111,13 @@ void WaypointMovementGenerator<Creature>::DoInitialize(Creature* owner)
 
     if (!_path)
     {
-        TC_LOG_ERROR("sql.sql", "WaypointMovementGenerator::DoInitialize: couldn't load path for creature (%s) (_pathId: %u)", owner->GetGUID().ToString().c_str(), _pathId);
+        TC_LOG_ERROR("sql.sql", "WaypointMovementGenerator::DoInitialize: couldn't load path for creature ({}) (_pathId: {})", owner->GetGUID().ToString(), _pathId);
         return;
     }
 
     owner->StopMoving();
 
     _nextMoveTime.Reset(1000);
-
-    // inform AI
-    if (CreatureAI* AI = owner->AI())
-        AI->WaypointPathStarted(_path->id);
 }
 
 void WaypointMovementGenerator<Creature>::DoReset(Creature* owner)
@@ -241,16 +240,19 @@ void WaypointMovementGenerator<Creature>::OnArrived(Creature* owner)
         return;
 
     ASSERT(_currentNode < _path->nodes.size(), "WaypointMovementGenerator::OnArrived: tried to reference a node id (%u) which is not included in path (%u)", _currentNode, _path->id);
-    WaypointNode const &waypoint = _path->nodes.at(_currentNode);
+    WaypointNode const& waypoint = _path->nodes[_currentNode];
     if (waypoint.delay)
     {
         owner->ClearUnitState(UNIT_STATE_ROAMING_MOVE);
         _nextMoveTime.Reset(waypoint.delay);
     }
 
+    // scripts can invalidate current path, store what we need
+    uint32 waypointId = waypoint.id;
+    uint32 pathId = _path->id;
     if (waypoint.eventId && urand(0, 99) < waypoint.eventChance)
     {
-        TC_LOG_DEBUG("maps.script", "Creature movement start script %u at point %u for %s.", waypoint.eventId, _currentNode, owner->GetGUID().ToString().c_str());
+        TC_LOG_DEBUG("maps.script", "Creature movement start script {} at point {} for {}.", waypoint.eventId, _currentNode, owner->GetGUID().ToString());
         owner->ClearUnitState(UNIT_STATE_ROAMING_MOVE);
         owner->GetMap()->ScriptsStart(sWaypointScripts, waypoint.eventId, owner, nullptr);
     }
@@ -259,10 +261,10 @@ void WaypointMovementGenerator<Creature>::OnArrived(Creature* owner)
     if (CreatureAI* AI = owner->AI())
     {
         AI->MovementInform(WAYPOINT_MOTION_TYPE, _currentNode);
-        AI->WaypointReached(waypoint.id, _path->id);
+        AI->WaypointReached(waypointId, pathId);
     }
 
-    owner->UpdateCurrentWaypointInfo(waypoint.id, _path->id);
+    owner->UpdateCurrentWaypointInfo(waypointId, pathId);
 }
 
 void WaypointMovementGenerator<Creature>::StartMove(Creature* owner, bool relaunch/* = false*/)
@@ -330,7 +332,6 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* owner, bool relaun
 
     ASSERT(_currentNode < _path->nodes.size(), "WaypointMovementGenerator::StartMove: tried to reference a node id (%u) which is not included in path (%u)", _currentNode, _path->id);
     WaypointNode const &waypoint = _path->nodes[_currentNode];
-    Position formationDest(waypoint.x, waypoint.y, waypoint.z, (waypoint.orientation && waypoint.delay) ? waypoint.orientation : 0.0f);
 
     RemoveFlag(MOVEMENTGENERATOR_FLAG_TRANSITORY | MOVEMENTGENERATOR_FLAG_INFORM_ENABLED | MOVEMENTGENERATOR_FLAG_TIMED_PAUSED);
 
@@ -340,31 +341,22 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* owner, bool relaun
 
     //! If creature is on transport, we assume waypoints set in DB are already transport offsets
     if (transportPath)
-    {
         init.DisableTransportPathTransformations();
-        if (TransportBase* trans = owner->GetDirectTransport())
-        {
-            float orientation = formationDest.GetOrientation();
-            trans->CalculatePassengerPosition(formationDest.m_positionX, formationDest.m_positionY, formationDest.m_positionZ, &orientation);
-            formationDest.SetOrientation(orientation);
-        }
-    }
 
     //! Do not use formationDest here, MoveTo requires transport offsets due to DisableTransportPathTransformations() call
     //! but formationDest contains global coordinates
     init.MoveTo(waypoint.x, waypoint.y, waypoint.z);
 
-    //! Accepts angles such as 0.00001 and -0.00001, 0 must be ignored, default value in waypoint table
-    if (waypoint.orientation && waypoint.delay)
-        init.SetFacing(waypoint.orientation);
+    if (waypoint.orientation.has_value() && waypoint.delay > 0)
+        init.SetFacing(*waypoint.orientation);
 
     switch (waypoint.moveType)
     {
         case WAYPOINT_MOVE_TYPE_LAND:
-            init.SetAnimation(Movement::ToGround);
+            init.SetAnimation(AnimTier::Ground);
             break;
         case WAYPOINT_MOVE_TYPE_TAKEOFF:
-            init.SetAnimation(Movement::ToFly);
+            init.SetAnimation(AnimTier::Hover);
             break;
         case WAYPOINT_MOVE_TYPE_RUN:
             init.SetWalk(false);
@@ -379,7 +371,7 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* owner, bool relaun
     init.Launch();
 
     // inform formation
-    owner->SignalFormationMovement(formationDest, waypoint.id, waypoint.moveType, (waypoint.orientation && waypoint.delay) ? true : false);
+    owner->SignalFormationMovement();
 }
 
 bool WaypointMovementGenerator<Creature>::ComputeNextNode()
@@ -389,4 +381,12 @@ bool WaypointMovementGenerator<Creature>::ComputeNextNode()
 
     _currentNode = (_currentNode + 1) % _path->nodes.size();
     return true;
+}
+
+std::string WaypointMovementGenerator<Creature>::GetDebugInfo() const
+{
+    std::stringstream sstr;
+    sstr << PathMovementBase::GetDebugInfo() << "\n"
+        << MovementGeneratorMedium::GetDebugInfo();
+    return sstr.str();
 }

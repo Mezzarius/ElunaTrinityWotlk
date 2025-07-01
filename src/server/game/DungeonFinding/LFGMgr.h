@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,6 +24,7 @@
 #include "LFGQueue.h"
 #include "LFGGroupData.h"
 #include "LFGPlayerData.h"
+#include "SharedDefines.h"
 #include <unordered_map>
 
 class Group;
@@ -44,7 +45,7 @@ enum LfgOptions
 
 enum LFGMgrEnum
 {
-    LFG_TIME_ROLECHECK                           = 45 * IN_MILLISECONDS,
+    LFG_TIME_ROLECHECK                           = 45,
     LFG_TIME_BOOT                                = 120,
     LFG_TIME_PROPOSAL                            = 45,
     LFG_QUEUEUPDATE_INTERVAL                     = 15 * IN_MILLISECONDS,
@@ -126,6 +127,18 @@ enum LfgRoleCheckState
     LFG_ROLECHECK_WRONG_ROLES                    = 4,      // Can't form a group with that role selection
     LFG_ROLECHECK_ABORTED                        = 5,      // Someone leave the group
     LFG_ROLECHECK_NO_ROLE                        = 6       // Someone selected no role
+};
+
+enum LfgRoleClasses {
+    TANK = (1 << (CLASS_WARRIOR - 1)) |
+           (1 << (CLASS_PALADIN - 1)) |
+           (1 << (CLASS_DEATH_KNIGHT - 1)) |
+           (1 << (CLASS_DRUID - 1)),
+
+    HEALER = (1 << (CLASS_PALADIN - 1)) |
+             (1 << (CLASS_PRIEST - 1)) |
+             (1 << (CLASS_SHAMAN - 1)) |
+             (1 << (CLASS_DRUID - 1)),
 };
 
 // Forward declaration (just to have all typedef together)
@@ -415,6 +428,7 @@ class TC_GAME_API LFGMgr
 
     private:
         uint8 GetTeam(ObjectGuid guid);
+        uint8 FilterClassRoles(Player* player, uint8 roles);
         void RestoreState(ObjectGuid guid, char const* debugMsg);
         void ClearState(ObjectGuid guid, char const* debugMsg);
         void SetDungeon(ObjectGuid guid, uint32 dungeon);
@@ -455,7 +469,7 @@ class TC_GAME_API LFGMgr
         LfgCachedDungeonContainer CachedDungeonMapStore;   /// Stores all dungeons by groupType
         // Reward System
         LfgRewardContainer RewardMapStore;                 /// Stores rewards for random dungeons
-        LFGDungeonContainer  LfgDungeonStore;
+        LFGDungeonContainer LfgDungeonStore;
         // Rolecheck - Proposal - Vote Kicks
         LfgRoleCheckContainer RoleChecksStore;             /// Current Role checks
         LfgProposalContainer ProposalsStore;               /// Current Proposals

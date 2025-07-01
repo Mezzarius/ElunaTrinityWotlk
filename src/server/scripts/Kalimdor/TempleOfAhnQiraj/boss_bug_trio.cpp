@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -84,11 +83,10 @@ public:
             _Reset();
         }
 
-
         void JustDied(Unit* /*killer*/) override
         {
             if (instance->GetData(DATA_BUG_TRIO_DEATH) < 2)// Unlootable if death
-                me->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+                me->RemoveDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
 
             instance->SetData(DATA_BUG_TRIO_DEATH, 1);
         }
@@ -180,7 +178,7 @@ public:
         {
             instance->SetData(DATA_VEM_DEATH, 0);
             if (instance->GetData(DATA_BUG_TRIO_DEATH) < 2)// Unlootable if death
-                me->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+                me->RemoveDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
             instance->SetData(DATA_BUG_TRIO_DEATH, 1);
         }
 
@@ -193,7 +191,7 @@ public:
             //Charge_Timer
             if (Charge_Timer <= diff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
                 {
                     DoCast(target, SPELL_CHARGE);
                     //me->SendMonsterMove(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0, true, 1);
@@ -265,14 +263,14 @@ public:
         void JustDied(Unit* /*killer*/) override
         {
             if (instance->GetData(DATA_BUG_TRIO_DEATH) < 2)// Unlootable if death
-                me->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+                me->RemoveDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
             instance->SetData(DATA_BUG_TRIO_DEATH, 1);
 
             for (uint8 i = 0; i < 10; ++i)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
                 {
-                    if (Creature* Summoned = me->SummonCreature(15621, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 90000))
+                    if (Creature* Summoned = me->SummonCreature(15621, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 90s))
                         Summoned->AI()->AttackStart(target);
                 }
             }

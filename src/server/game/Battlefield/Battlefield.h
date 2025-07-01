@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,7 +25,8 @@
 
 enum BattlefieldTypes
 {
-    BATTLEFIELD_WG                                          // Wintergrasp
+    BATTLEFIELD_WG  = 1, // Wintergrasp
+    BATTLEFIELD_MAX
 };
 
 enum BattlefieldIDs
@@ -84,9 +85,13 @@ typedef std::map<ObjectGuid, time_t> PlayerTimerMap;
 class TC_GAME_API BfCapturePoint
 {
     public:
-        BfCapturePoint(Battlefield* bf);
+        explicit BfCapturePoint(Battlefield* bf);
+        BfCapturePoint(BfCapturePoint const&) = delete;
+        BfCapturePoint(BfCapturePoint&&) = delete;
+        BfCapturePoint& operator=(BfCapturePoint const&) = delete;
+        BfCapturePoint& operator=(BfCapturePoint&&) = delete;
 
-        virtual ~BfCapturePoint() { }
+        virtual ~BfCapturePoint();
 
         virtual void FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& /*packet*/) { }
 
@@ -152,7 +157,13 @@ class TC_GAME_API BfCapturePoint
 class TC_GAME_API BfGraveyard
 {
     public:
-        BfGraveyard(Battlefield* Bf);
+        explicit BfGraveyard(Battlefield* bf);
+        BfGraveyard(BfGraveyard const&) = delete;
+        BfGraveyard(BfGraveyard&&) = delete;
+        BfGraveyard& operator=(BfGraveyard const&) = delete;
+        BfGraveyard& operator=(BfGraveyard&&) = delete;
+
+        virtual ~BfGraveyard();
 
         // Method to changing who controls the graveyard
         void GiveControlTo(TeamId team);
@@ -203,6 +214,11 @@ class TC_GAME_API Battlefield : public ZoneScript
     public:
         /// Constructor
         Battlefield();
+        Battlefield(Battlefield const&) = delete;
+        Battlefield(Battlefield&&) = delete;
+        Battlefield& operator=(Battlefield const&) = delete;
+        Battlefield& operator=(Battlefield&&) = delete;
+
         /// Destructor
         virtual ~Battlefield();
 
@@ -211,6 +227,8 @@ class TC_GAME_API Battlefield : public ZoneScript
 
         /// Call this to init the Battlefield
         virtual bool SetupBattlefield() { return true; }
+
+        void SendInitWorldStatesTo(Player* player);
 
         /// Update data of a worldstate to all players present in zone
         void SendUpdateWorldState(uint32 field, uint32 value);
@@ -347,7 +365,7 @@ class TC_GAME_API Battlefield : public ZoneScript
         uint32 GetTimer() const { return m_Timer; }
         void SetTimer(uint32 timer) { m_Timer = timer; }
 
-        void DoPlaySoundToAll(uint32 SoundID);
+        void DoPlaySoundToAll(uint32 soundID);
 
         void InvitePlayerToQueue(Player* player);
         void InvitePlayerToWar(Player* player);
@@ -407,9 +425,9 @@ class TC_GAME_API Battlefield : public ZoneScript
         virtual void SendRemoveWorldStates(Player* /*player*/) { }
 
         // use for send a packet for all player list
-        void BroadcastPacketToZone(WorldPacket& data) const;
-        void BroadcastPacketToQueue(WorldPacket& data) const;
-        void BroadcastPacketToWar(WorldPacket& data) const;
+        void BroadcastPacketToZone(WorldPacket const* data) const;
+        void BroadcastPacketToQueue(WorldPacket const* data) const;
+        void BroadcastPacketToWar(WorldPacket const* data) const;
 
         // CapturePoint system
         void AddCapturePoint(BfCapturePoint* cp) { m_capturePoints[cp->GetCapturePointEntry()] = cp; }

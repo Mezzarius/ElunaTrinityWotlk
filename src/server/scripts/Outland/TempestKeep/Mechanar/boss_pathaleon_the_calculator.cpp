@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,240 +15,226 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* ScriptData
-SDName: Boss Pathaleon the Calculator
-SD%Complete: 50
-SDComment: Event missing. Script for himself 99% blizzlike.
-SDCategory: Tempest Keep, The Mechanar
-EndScriptData */
-
 #include "ScriptMgr.h"
 #include "mechanar.h"
 #include "ScriptedCreature.h"
+#include "SpellScript.h"
+#include "SpellInfo.h"
 #include "TemporarySummon.h"
 
-enum Says
+enum PathaleonTexts
 {
-    SAY_AGGRO                      = 0,
-    SAY_DOMINATION                 = 1,
-    SAY_SUMMON                     = 2,
-    SAY_ENRAGE                     = 3,
-    SAY_SLAY                       = 4,
-    SAY_DEATH                      = 5
+    SAY_AGGRO                          = 0,
+    SAY_DOMINATION                     = 1,
+    SAY_SUMMON                         = 2,
+    SAY_ENRAGE                         = 3,
+    SAY_SLAY                           = 4,
+    SAY_DEATH                          = 5
 };
 
-enum Spells
+enum PathaleonSpells
 {
-    SPELL_MANA_TAP                 = 36021,
-    SPELL_ARCANE_TORRENT           = 36022,
-    SPELL_DOMINATION               = 35280,
-    H_SPELL_ARCANE_EXPLOSION       = 15453,
-    SPELL_FRENZY                   = 36992,
-    SPELL_SUMMON_NETHER_WRAITH_1   = 35285, // Not scripted
-    SPELL_SUMMON_NETHER_WRAITH_2   = 35286, // Not scripted
-    SPELL_SUMMON_NETHER_WRAITH_3   = 35287, // Not scripted
-    SPELL_SUMMON_NETHER_WRAITH_4   = 35288, // Not scripted
-    SPELL_DETONATION               = 35058, // Used by Nether Wraith
-    SPELL_ARCANE_MISSILES          = 35034  // Used by Nether Wraith
+    SPELL_MANA_TAP                     = 36021,
+    SPELL_ARCANE_TORRENT               = 36022,
+    SPELL_DOMINATION                   = 35280,
+    SPELL_ARCANE_EXPLOSION_H           = 15453,
+    SPELL_FRENZY                       = 36992,
+    SPELL_SUICIDE                      = 35301,    // NYI
+
+    SPELL_SUMMON_NETHER_WRAITHS        = 35284,
+    SPELL_SUMMON_NETHER_WRAITH_LEFT    = 35285,
+    SPELL_SUMMON_NETHER_WRAITH_RIGHT   = 35286,    // Unused
+    SPELL_SUMMON_NETHER_WRAITH_FRONT   = 35287,
+    SPELL_SUMMON_NETHER_WRAITH_BACK    = 35288,
+
+    // Nether Wraith
+    SPELL_ARCANE_BOLT                  = 20720,
+    SPELL_NETHER_EXPLOSION             = 35058
 };
 
-enum Events
+enum PathaleonEvents
 {
-    EVENT_SUMMON                   = 1,
-    EVENT_MANA_TAP                 = 2,
-    EVENT_ARCANE_TORRENT           = 3,
-    EVENT_DOMINATION               = 4,
-    EVENT_ARCANE_EXPLOSION         = 5
+    EVENT_SUMMON                       = 1,
+    EVENT_MANA_TAP,
+    EVENT_ARCANE_TORRENT,
+    EVENT_DOMINATION,
+    EVENT_ARCANE_EXPLOSION,
+    EVENT_FRENZY
 };
 
-enum Creatures
+// 19220 - Pathaleon the Calculator
+struct boss_pathaleon_the_calculator : public BossAI
 {
-    NPC_NETHER_WRAITH               = 21062
-};
+    boss_pathaleon_the_calculator(Creature* creature) : BossAI(creature, DATA_PATHALEON_THE_CALCULATOR) { }
 
-class boss_pathaleon_the_calculator : public CreatureScript
-{
-    public:
-        boss_pathaleon_the_calculator(): CreatureScript("boss_pathaleon_the_calculator") { }
+    void JustEngagedWith(Unit* who) override
+    {
+        BossAI::JustEngagedWith(who);
+        events.ScheduleEvent(EVENT_SUMMON, 30s);
+        events.ScheduleEvent(EVENT_MANA_TAP, 12s, 20s);
+        events.ScheduleEvent(EVENT_ARCANE_TORRENT, 16s, 25s);
+        events.ScheduleEvent(EVENT_DOMINATION, 25s, 40s);
+        if (IsHeroic())
+            events.ScheduleEvent(EVENT_ARCANE_EXPLOSION, 8s, 13s);
+        Talk(SAY_AGGRO);
+    }
 
-        struct boss_pathaleon_the_calculatorAI : public BossAI
+    void KilledUnit(Unit* /*victim*/) override
+    {
+        Talk(SAY_SLAY);
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        _JustDied();
+        Talk(SAY_DEATH);
+    }
+
+    void OnSpellCast(SpellInfo const* spell) override
+    {
+        switch (spell->Id)
         {
-            boss_pathaleon_the_calculatorAI(Creature* creature) : BossAI(creature, DATA_PATHALEON_THE_CALCULATOR) { }
-
-            void JustEngagedWith(Unit* /*who*/) override
-            {
-                _JustEngagedWith();
-                events.ScheduleEvent(EVENT_SUMMON, 30s);
-                events.ScheduleEvent(EVENT_MANA_TAP, 12s, 20s);
-                events.ScheduleEvent(EVENT_ARCANE_TORRENT, 16s, 25s);
-                events.ScheduleEvent(EVENT_DOMINATION, 25s, 40s);
-                events.ScheduleEvent(EVENT_ARCANE_EXPLOSION, 8s, 13s);
-                Talk(SAY_AGGRO);
-            }
-
-            void KilledUnit(Unit* /*victim*/) override
-            {
-                Talk(SAY_SLAY);
-            }
-
-            void JustDied(Unit* /*killer*/) override
-            {
-                _JustDied();
-                Talk(SAY_DEATH);
-            }
-
-            void DamageTaken(Unit* /*attacker*/, uint32& damage) override
-            {
-                if (me->HealthBelowPctDamaged(20, damage) && !me->HasAura(SPELL_FRENZY))
-                {
-                    DoCast(me, SPELL_FRENZY);
-                    Talk(SAY_ENRAGE);
-                }
-            }
-
-            void UpdateAI(uint32 diff) override
-            {
-                if (!UpdateVictim())
-                    return;
-
-                events.Update(diff);
-
-                if (me->HasUnitState(UNIT_STATE_CASTING))
-                    return;
-
-                while (uint32 eventId = events.ExecuteEvent())
-                {
-                    switch (eventId)
-                    {
-                        case EVENT_SUMMON:
-                            for (uint8 i = 0; i < 3; ++i)
-                            {
-                                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
-                                {
-                                    if (Creature* Wraith = me->SummonCreature(NPC_NETHER_WRAITH, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 25000))
-                                        Wraith->AI()->AttackStart(target);
-                                }
-                            }
-                            Talk(SAY_SUMMON);
-                            events.ScheduleEvent(EVENT_SUMMON, 30s, 45s);
-                            break;
-                        case EVENT_MANA_TAP:
-                            DoCastVictim(SPELL_MANA_TAP, true);
-                            events.ScheduleEvent(EVENT_MANA_TAP, 14s, 22s);
-                            break;
-                        case EVENT_ARCANE_TORRENT:
-                            DoCastVictim(SPELL_ARCANE_TORRENT, true);
-                            events.ScheduleEvent(EVENT_ARCANE_TORRENT, 12s, 18s);
-                            break;
-                        case EVENT_DOMINATION:
-                            Talk(SAY_DOMINATION);
-                            DoCastVictim(SPELL_DOMINATION, true);
-                            events.ScheduleEvent(EVENT_DOMINATION, 25s, 30s);
-                            break;
-                        case EVENT_ARCANE_EXPLOSION: // Heroic only
-                            DoCastVictim(H_SPELL_ARCANE_EXPLOSION, true);
-                            events.ScheduleEvent(EVENT_ARCANE_EXPLOSION, 10s, 14s);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    if (me->HasUnitState(UNIT_STATE_CASTING))
-                        return;
-                }
-
-                DoMeleeAttackIfReady();
-            }
-        };
-
-        CreatureAI* GetAI(Creature* creature) const override
-        {
-            return GetMechanarAI<boss_pathaleon_the_calculatorAI>(creature);
+            case SPELL_SUMMON_NETHER_WRAITHS:
+                Talk(SAY_SUMMON);
+                break;
+            case SPELL_DOMINATION:
+                Talk(SAY_DOMINATION);
+                break;
+            case SPELL_FRENZY:
+                Talk(SAY_ENRAGE);
+                break;
+            default:
+                break;
         }
+    }
+
+    void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
+    {
+        if (me->HealthBelowPctDamaged(20, damage) && !me->HasAura(SPELL_FRENZY))
+            events.ScheduleEvent(EVENT_FRENZY, 0s);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+
+        events.Update(diff);
+
+        if (me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+
+        while (uint32 eventId = events.ExecuteEvent())
+        {
+            switch (eventId)
+            {
+                case EVENT_SUMMON:
+                    DoCastSelf(SPELL_SUMMON_NETHER_WRAITHS);
+                    events.Repeat(30s, 45s);
+                    break;
+                case EVENT_MANA_TAP:
+                    DoCastVictim(SPELL_MANA_TAP);
+                    events.Repeat(14s, 22s);
+                    break;
+                case EVENT_ARCANE_TORRENT:
+                    DoCastVictim(SPELL_ARCANE_TORRENT);
+                    events.Repeat(12s, 18s);
+                    break;
+                case EVENT_DOMINATION:
+                    DoCastVictim(SPELL_DOMINATION);
+                    events.Repeat(25s, 30s);
+                    break;
+                case EVENT_ARCANE_EXPLOSION:
+                    DoCastSelf(SPELL_ARCANE_EXPLOSION_H);
+                    events.Repeat(10s, 14s);
+                    break;
+                case EVENT_FRENZY:
+                    DoCastSelf(SPELL_FRENZY);
+                    break;
+                default:
+                    break;
+            }
+
+            if (me->HasUnitState(UNIT_STATE_CASTING))
+                return;
+        }
+
+        DoMeleeAttackIfReady();
+    }
 };
 
-class npc_nether_wraith : public CreatureScript
+struct npc_nether_wraith : public ScriptedAI
 {
-    public:
+    npc_nether_wraith(Creature* creature) : ScriptedAI(creature) { }
 
-        npc_nether_wraith() : CreatureScript("npc_nether_wraith") { }
+    void Reset() override
+    {
+        me->SetCorpseDelay(15, true);
+        _scheduler.CancelAll();
+    }
 
-        struct npc_nether_wraithAI : public ScriptedAI
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _scheduler.Schedule(0s, 10s, [this](TaskContext task)
         {
-            npc_nether_wraithAI(Creature* creature) : ScriptedAI(creature)
-            {
-                Initialize();
-            }
+            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
+                DoCast(target, SPELL_ARCANE_BOLT);
+            task.Repeat(5s, 10s);
+        });
 
-            void Initialize()
-            {
-                ArcaneMissiles_Timer = urand(1000, 4000);
-                Detonation_Timer = 20000;
-                Die_Timer = 2200;
-                Detonation = false;
-            }
-
-            uint32 ArcaneMissiles_Timer;
-            uint32 Detonation_Timer;
-            uint32 Die_Timer;
-            bool Detonation;
-
-            void Reset() override
-            {
-                Initialize();
-            }
-
-            void JustEngagedWith(Unit* /*who*/) override { }
-
-            void UpdateAI(uint32 diff) override
-            {
-                if (!UpdateVictim())
-                    return;
-
-                if (ArcaneMissiles_Timer <= diff)
-                {
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1))
-                        DoCast(target, SPELL_ARCANE_MISSILES);
-                    else
-                        DoCastVictim(SPELL_ARCANE_MISSILES);
-                    ArcaneMissiles_Timer = urand(5000, 10000);
-                }
-                else
-                    ArcaneMissiles_Timer -=diff;
-
-                if (!Detonation)
-                {
-                    if (Detonation_Timer <= diff)
-                    {
-                        DoCast(me, SPELL_DETONATION);
-                        Detonation = true;
-                    }
-                    else
-                        Detonation_Timer -= diff;
-                }
-
-                if (Detonation)
-                {
-                    if (Die_Timer <= diff)
-                    {
-                        me->DespawnOrUnsummon();
-                        return;
-                    }
-                    else
-                        Die_Timer -= diff;
-                }
-                DoMeleeAttackIfReady();
-            }
-        };
-
-        CreatureAI* GetAI(Creature* creature) const override
+        _scheduler.Schedule(5s, 10s, [this](TaskContext task)
         {
-            return GetMechanarAI<npc_nether_wraithAI>(creature);
-        }
+            DoCastSelf(SPELL_NETHER_EXPLOSION);
+            task.Repeat(10s, 15s);
+        });
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+
+        _scheduler.Update(diff);
+
+        DoMeleeAttackIfReady();
+    }
+
+private:
+    TaskScheduler _scheduler;
+};
+
+// 35284 - Summon Nether Wraiths
+class spell_pathaleon_summon_nether_wraiths : public SpellScript
+{
+    PrepareSpellScript(spell_pathaleon_summon_nether_wraiths);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SUMMON_NETHER_WRAITH_LEFT,
+            SPELL_SUMMON_NETHER_WRAITH_FRONT,
+            SPELL_SUMMON_NETHER_WRAITH_BACK
+        });
+    }
+
+    void HandleScript(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        caster->CastSpell(caster, SPELL_SUMMON_NETHER_WRAITH_LEFT);
+        caster->CastSpell(caster, SPELL_SUMMON_NETHER_WRAITH_FRONT);
+        caster->CastSpell(caster, SPELL_SUMMON_NETHER_WRAITH_BACK);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_pathaleon_summon_nether_wraiths::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+    }
 };
 
 void AddSC_boss_pathaleon_the_calculator()
 {
-    new boss_pathaleon_the_calculator();
-    new npc_nether_wraith();
+    RegisterMechanarCreatureAI(boss_pathaleon_the_calculator);
+    RegisterMechanarCreatureAI(npc_nether_wraith);
+    RegisterSpellScript(spell_pathaleon_summon_nether_wraiths);
 }

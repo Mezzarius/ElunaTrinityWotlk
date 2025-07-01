@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,10 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _CRT_SECURE_NO_DEPRECATE
-
 #include "dbcfile.h"
-#include "mpq_libmpq04.h"
+#include "mpq_libmpq.h"
 
 DBCFile::DBCFile(const std::string& filename):
     filename(filename), recordSize(0), recordCount(0), fieldCount(0), stringSize(0), data(nullptr), stringTable(nullptr)

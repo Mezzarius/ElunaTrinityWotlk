@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,6 +16,7 @@
  */
 
 #include "ScriptMgr.h"
+#include "Containers.h"
 #include "ScriptedCreature.h"
 #include "ruins_of_ahnqiraj.h"
 
@@ -77,7 +78,7 @@ class boss_moam : public CreatureScript
                 //events.ScheduleEvent(EVENT_WIDE_SLASH, 11s);
             }
 
-            void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) override
+            void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
             {
                 if (!_isStonePhase && HealthBelowPct(45))
                 {

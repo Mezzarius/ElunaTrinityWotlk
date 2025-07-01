@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+# This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -16,14 +16,15 @@ CollectSourceFiles(
   # Exclude
   ${CMAKE_CURRENT_SOURCE_DIR}/PrecompiledHeaders)
 
-if( WIN32 )
-  list(APPEND PRIVATE_SOURCES ${sources_windows})
-  if ( MSVC )
+list(APPEND PRIVATE_SOURCES ${sources_windows})
+
+if(WIN32)
+  if(MSVC)
     list(APPEND PRIVATE_SOURCES authserver.rc)
   endif()
 endif()
 
-if (USE_COREPCH)
+if(USE_COREPCH)
   set(PRIVATE_PCH_HEADER PrecompiledHeaders/authPCH.h)
 endif()
 
@@ -33,9 +34,10 @@ add_executable(authserver
   ${PRIVATE_SOURCES}
 )
 
-if( NOT WIN32 )
-  set_target_properties(authserver PROPERTIES
-    COMPILE_DEFINITIONS _TRINITY_REALM_CONFIG="${CONF_DIR}/authserver.conf"
+if(NOT WIN32)
+  target_compile_definitions(authserver PRIVATE
+    _TRINITY_REALM_CONFIG="${CONF_DIR}/authserver.conf"
+    _TRINITY_REALM_CONFIG_DIR="${CONF_DIR}/authserver.conf.d"
   )
 endif()
 
@@ -62,29 +64,27 @@ set_target_properties(authserver
       FOLDER
         "server")
 
-if( WIN32 )
-  if ( "${CMAKE_MAKE_PROGRAM}" MATCHES "MSBuild" )
+if(UNIX)
+  install(TARGETS authserver DESTINATION bin)
+  if(COPY_CONF)
     add_custom_command(TARGET authserver
       POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/authserver.conf.dist ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/authserver.conf.dist ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../etc/authserver.conf.dist
     )
-  elseif ( MINGW )
+    install(FILES  authserver.conf.dist DESTINATION ${CONF_DIR})
+  endif()
+elseif(WIN32)
+  install(TARGETS authserver DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  if(COPY_CONF)
     add_custom_command(TARGET authserver
       POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/authserver.conf.dist ${CMAKE_BINARY_DIR}/bin/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/authserver.conf.dist ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/authserver.conf.dist
     )
+    install(FILES authserver.conf.dist DESTINATION "${CMAKE_INSTALL_PREFIX}")
   endif()
 endif()
 
-if( UNIX )
-  install(TARGETS authserver DESTINATION bin)
-  install(FILES  authserver.conf.dist DESTINATION ${CONF_DIR})
-elseif( WIN32 )
-  install(TARGETS authserver DESTINATION "${CMAKE_INSTALL_PREFIX}")
-  install(FILES authserver.conf.dist DESTINATION "${CMAKE_INSTALL_PREFIX}")
-endif()
-
 # Generate precompiled header
-if (USE_COREPCH)
+if(USE_COREPCH)
   add_cxx_pch(authserver ${PRIVATE_PCH_HEADER})
 endif()

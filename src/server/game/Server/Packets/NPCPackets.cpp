@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -41,6 +41,17 @@ WorldPacket const* WorldPackets::NPC::TrainerList::Write()
     }
 
     _worldPacket << Greeting;
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::NPC::GossipPOI::Write()
+{
+    _worldPacket << int32(Flags);
+    _worldPacket << Pos;
+    _worldPacket << int32(Icon);
+    _worldPacket << int32(Importance);
+    _worldPacket << Name;
 
     return &_worldPacket;
 }

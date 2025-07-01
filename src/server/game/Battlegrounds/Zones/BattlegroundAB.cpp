@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,6 +17,7 @@
 
 #include "BattlegroundAB.h"
 #include "BattlegroundMgr.h"
+#include "BattlegroundPackets.h"
 #include "Creature.h"
 #include "DBCStores.h"
 #include "GameObject.h"
@@ -26,15 +26,12 @@
 #include "Player.h"
 #include "Random.h"
 #include "Util.h"
-#include "WorldPacket.h"
 #include "WorldSession.h"
 #include "WorldStatePackets.h"
 
-void BattlegroundABScore::BuildObjectivesBlock(WorldPacket& data)
+void BattlegroundABScore::BuildObjectivesBlock(WorldPackets::Battleground::PVPLogData_Player& playerData)
 {
-    data << uint32(2);
-    data << uint32(BasesAssaulted);
-    data << uint32(BasesDefended);
+    playerData.Stats = { BasesAssaulted, BasesDefended };
 }
 
 BattlegroundAB::BattlegroundAB()
@@ -157,10 +154,15 @@ void BattlegroundAB::PostUpdateImpl(uint32 diff)
                 if (!m_IsInformedNearVictory && m_TeamScores[team] > BG_AB_WARNING_NEAR_VICTORY_SCORE)
                 {
                     if (team == TEAM_ALLIANCE)
+                    {
                         SendBroadcastText(BG_AB_TEXT_ALLIANCE_NEAR_VICTORY, CHAT_MSG_BG_SYSTEM_NEUTRAL);
+                        PlaySoundToAll(BG_AB_SOUND_NEAR_VICTORY_ALLIANCE);
+                    }
                     else
+                    {
                         SendBroadcastText(BG_AB_TEXT_HORDE_NEAR_VICTORY, CHAT_MSG_BG_SYSTEM_NEUTRAL);
-                    PlaySoundToAll(BG_AB_SOUND_NEAR_VICTORY);
+                        PlaySoundToAll(BG_AB_SOUND_NEAR_VICTORY_HORDE);
+                    }
                     m_IsInformedNearVictory = true;
                 }
 
@@ -226,8 +228,10 @@ void BattlegroundAB::StartingEventOpenDoors()
 
 void BattlegroundAB::AddPlayer(Player* player)
 {
+    bool const isInBattleground = IsPlayerInBattleground(player->GetGUID());
     Battleground::AddPlayer(player);
-    PlayerScores[player->GetGUID().GetCounter()] = new BattlegroundABScore(player->GetGUID());
+    if (!isInBattleground)
+        PlayerScores[player->GetGUID().GetCounter()] = new BattlegroundABScore(player->GetGUID());
 }
 
 void BattlegroundAB::RemovePlayer(Player* /*player*/, ObjectGuid /*guid*/, uint32 /*team*/)
@@ -365,14 +369,14 @@ void BattlegroundAB::_SendNodeUpdate(uint8 node)
 void BattlegroundAB::_NodeOccupied(uint8 node, Team team)
 {
     if (!AddSpiritGuide(node, BG_AB_SpiritGuidePos[node], GetTeamIndexByTeamId(team)))
-        TC_LOG_ERROR("bg.battleground", "Failed to spawn spirit guide! point: %u, team: %u, ", node, team);
+        TC_LOG_ERROR("bg.battleground", "Failed to spawn spirit guide! point: {}, team: {}, ", node, team);
 
     if (node >= BG_AB_DYNAMIC_NODES_COUNT)//only dynamic nodes, no start points
         return;
 
     uint8 capturedNodes = 0;
     for (uint8 i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
-        if (m_Nodes[i] == GetTeamIndexByTeamId(team) + BG_AB_NODE_TYPE_OCCUPIED && !m_NodeTimers[i])
+        if (m_Nodes[i] == uint8(GetTeamIndexByTeamId(team)) + BG_AB_NODE_TYPE_OCCUPIED && !m_NodeTimers[i])
             ++capturedNodes;
 
     if (capturedNodes >= 5)
@@ -466,7 +470,7 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* source, GameObject* /*targ
         {
             UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
             m_prevNodes[node] = m_Nodes[node];
-            m_Nodes[node] = teamIndex + BG_AB_NODE_TYPE_CONTESTED;
+            m_Nodes[node] = uint8(teamIndex) + BG_AB_NODE_TYPE_CONTESTED;
             // burn current contested banner
             _DelBanner(node, BG_AB_NODE_TYPE_CONTESTED, !teamIndex);
             // create new contested banner
@@ -484,7 +488,7 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* source, GameObject* /*targ
         {
             UpdatePlayerScore(source, SCORE_BASES_DEFENDED, 1);
             m_prevNodes[node] = m_Nodes[node];
-            m_Nodes[node] = teamIndex + BG_AB_NODE_TYPE_OCCUPIED;
+            m_Nodes[node] = uint8(teamIndex) + BG_AB_NODE_TYPE_OCCUPIED;
             // burn current contested banner
             _DelBanner(node, BG_AB_NODE_TYPE_CONTESTED, !teamIndex);
             // create new occupied banner
@@ -505,7 +509,7 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* source, GameObject* /*targ
     {
         UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
         m_prevNodes[node] = m_Nodes[node];
-        m_Nodes[node] = teamIndex + BG_AB_NODE_TYPE_CONTESTED;
+        m_Nodes[node] = uint8(teamIndex) + BG_AB_NODE_TYPE_CONTESTED;
         // burn current occupied banner
         _DelBanner(node, BG_AB_NODE_TYPE_OCCUPIED, !teamIndex);
         // create new contested banner
@@ -659,7 +663,7 @@ WorldSafeLocsEntry const* BattlegroundAB::GetClosestGraveyard(Player* player)
             WorldSafeLocsEntry const* entry = sWorldSafeLocsStore.LookupEntry(BG_AB_GraveyardIds[nodes[i]]);
             if (!entry)
                 continue;
-            float dist = (entry->x - plr_x)*(entry->x - plr_x)+(entry->y - plr_y)*(entry->y - plr_y);
+            float dist = (entry->Loc.X - plr_x)*(entry->Loc.X - plr_x)+(entry->Loc.Y - plr_y)*(entry->Loc.Y - plr_y);
             if (mindist > dist)
             {
                 mindist = dist;

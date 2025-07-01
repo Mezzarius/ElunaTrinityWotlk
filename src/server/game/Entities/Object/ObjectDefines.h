@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,6 +41,8 @@
 #define MIN_MELEE_REACH                     2.0f
 #define NOMINAL_MELEE_RANGE                 5.0f
 #define MELEE_RANGE                         (NOMINAL_MELEE_RANGE - MIN_MELEE_REACH * 2) //center to center for players
+
+#define EXTRA_CELL_SEARCH_RADIUS            40.0f // We need in some cases increase search radius. Allow to find creatures with huge combat reach in a different nearby cell.
 
 enum class VisibilityDistanceType : uint8
 {

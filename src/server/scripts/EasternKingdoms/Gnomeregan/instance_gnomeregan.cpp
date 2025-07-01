@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,7 +36,7 @@ public:
 
     struct instance_gnomeregan_InstanceMapScript : public InstanceScript
     {
-        instance_gnomeregan_InstanceMapScript(Map* map) : InstanceScript(map)
+        instance_gnomeregan_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
         {
             SetHeaders(DataHeader);
             SetBossNumber(MAX_ENCOUNTER);

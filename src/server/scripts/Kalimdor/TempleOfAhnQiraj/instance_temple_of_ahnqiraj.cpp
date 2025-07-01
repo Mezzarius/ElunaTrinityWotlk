@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,7 +25,6 @@ EndScriptData */
 #include "ScriptMgr.h"
 #include "Creature.h"
 #include "InstanceScript.h"
-#include "Map.h"
 #include "temple_of_ahnqiraj.h"
 
 ObjectData const creatureData[] =
@@ -39,7 +37,6 @@ ObjectData const creatureData[] =
     { NPC_SARTURA,   DATA_SARTURA   },
     { 0,             0              } // END
 };
-
 
 DoorData const doorData[] =
 {
@@ -62,7 +59,7 @@ class instance_temple_of_ahnqiraj : public InstanceMapScript
 
         struct instance_temple_of_ahnqiraj_InstanceMapScript : public InstanceScript
         {
-            instance_temple_of_ahnqiraj_InstanceMapScript(Map* map) : InstanceScript(map)
+            instance_temple_of_ahnqiraj_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
             {
                 SetHeaders(DataHeader);
                 LoadObjectData(creatureData, nullptr);
@@ -127,7 +124,8 @@ class instance_temple_of_ahnqiraj : public InstanceMapScript
                         break;
 
                     case DATA_BUG_TRIO_DEATH:
-                        ++BugTrioDeathCount;
+                        if (++BugTrioDeathCount >= 3)
+                            SetBossState(DATA_BUG_TRIO, DONE);
                         break;
 
                     case DATA_VEKLOR_DEATH:

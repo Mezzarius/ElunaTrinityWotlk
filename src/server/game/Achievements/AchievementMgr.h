@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,6 +21,7 @@
 #include "DatabaseEnvFwd.h"
 #include "DBCEnums.h"
 #include "DBCStores.h"
+#include "Duration.h"
 #include "ObjectGuid.h"
 #include <string>
 #include <unordered_map>
@@ -279,7 +279,7 @@ class TC_GAME_API AchievementMgr
         void Reset();
         static void DeleteFromDB(ObjectGuid lowguid);
         void LoadFromDB(PreparedQueryResult achievementResult, PreparedQueryResult criteriaResult);
-        void SaveToDB(SQLTransaction& trans);
+        void SaveToDB(CharacterDatabaseTransaction trans);
         void ResetAchievementCriteria(AchievementCriteriaCondition condition, uint32 value, bool evenIfCriteriaComplete);
         void UpdateAchievementCriteria(AchievementCriteriaTypes type, uint32 miscValue1 = 0, uint32 miscValue2 = 0, WorldObject* ref = nullptr);
         void CompletedAchievement(AchievementEntry const* entry);
@@ -292,6 +292,7 @@ class TC_GAME_API AchievementMgr
         void StartTimedAchievement(AchievementCriteriaTimedTypes type, uint32 entry, uint32 timeLost = 0);
         void RemoveTimedAchievement(AchievementCriteriaTimedTypes type, uint32 entry);   // used for quest and scripted timed achievements
 
+        uint32 GetAchievementPoints() const { return m_achievementPoints; }
     private:
         void SendAchievementEarned(AchievementEntry const* achievement) const;
         void SendCriteriaUpdate(AchievementCriteriaEntry const* entry, CriteriaProgress const* progress, uint32 timeElapsed, bool timedCompleted) const;
@@ -302,7 +303,7 @@ class TC_GAME_API AchievementMgr
         bool IsCompletedCriteria(AchievementCriteriaEntry const* achievementCriteria, AchievementEntry const* achievement);
         bool IsCompletedAchievement(AchievementEntry const* entry);
         bool CanUpdateCriteria(AchievementCriteriaEntry const* criteria, AchievementEntry const* achievement, uint32 miscValue1, uint32 miscValue2, WorldObject const* ref);
-        void BuildAllDataPacket(WorldPacket* data) const;
+        void BuildAllDataPacket(Player const* receiver, WorldPacket* data) const;
 
         bool ConditionsSatisfied(AchievementCriteriaEntry const* criteria) const;
         bool RequirementsSatisfied(AchievementCriteriaEntry const* criteria, AchievementEntry const* achievement, uint32 miscValue1, uint32 miscValue2, WorldObject const* ref) const;
@@ -312,6 +313,7 @@ class TC_GAME_API AchievementMgr
         CompletedAchievementMap m_completedAchievements;
         typedef std::map<uint32, uint32> TimedAchievementMap;
         TimedAchievementMap m_timedAchievements;      // Criteria id/time left in MS
+        uint32 m_achievementPoints;
 };
 
 class TC_GAME_API AchievementGlobalMgr
@@ -377,13 +379,13 @@ class TC_GAME_API AchievementGlobalMgr
         void LoadCompletedAchievements();
         void LoadRewards();
         void LoadRewardLocales();
-        AchievementEntry const* GetAchievement(uint32 achievementId) const;
-        AchievementCriteriaEntry const* GetAchievementCriteria(uint32 achievementId) const;
     private:
         AchievementCriteriaDataMap m_criteriaDataMap;
 
         // store achievement criterias by type to speed up lookup
         AchievementCriteriaEntryList m_AchievementCriteriasByType[ACHIEVEMENT_CRITERIA_TYPE_TOTAL];
+
+        static AchievementCriteriaEntryList const EmptyCriteriaList;
 
         // store achievement criterias split by misc values
         AchievementCriteriaListByMiscValue m_AchievementCriteriasByMiscValue[ACHIEVEMENT_CRITERIA_TYPE_TOTAL];
@@ -399,12 +401,14 @@ class TC_GAME_API AchievementGlobalMgr
         AchievementListByReferencedId m_AchievementListByReferencedId;
 
         // store realm first achievements
-        // std::chrono::system_clock::time_point::min() is a placeholder value for realm firsts not yet completed
-        // std::chrono::system_clock::time_point::max() is a value assigned to realm firsts complete before worldserver started
-        std::unordered_map<uint32 /*achievementId*/, std::chrono::system_clock::time_point /*completionTime*/> _allCompletedAchievements;
+        // SystemTimePoint::min() is a placeholder value for realm firsts not yet completed
+        // SystemTimePoint::max() is a value assigned to realm firsts complete before worldserver started
+        std::unordered_map<uint32 /*achievementId*/, SystemTimePoint /*completionTime*/> _allCompletedAchievements;
 
         AchievementRewards m_achievementRewards;
         AchievementRewardLocales m_achievementRewardLocales;
+
+        friend class UnitTestDataLoader;
 };
 
 #define sAchievementMgr AchievementGlobalMgr::instance()

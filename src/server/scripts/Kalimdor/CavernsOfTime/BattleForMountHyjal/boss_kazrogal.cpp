@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -82,13 +82,13 @@ public:
             Initialize();
 
             if (IsEvent)
-                instance->SetData(DATA_KAZROGALEVENT, NOT_STARTED);
+                instance->SetBossState(DATA_KAZROGAL, NOT_STARTED);
         }
 
         void JustEngagedWith(Unit* /*who*/) override
         {
             if (IsEvent)
-                instance->SetData(DATA_KAZROGALEVENT, IN_PROGRESS);
+                instance->SetBossState(DATA_KAZROGAL, IN_PROGRESS);
             Talk(SAY_ONAGGRO);
         }
 
@@ -111,7 +111,7 @@ public:
         {
             hyjal_trashAI::JustDied(killer);
             if (IsEvent)
-                instance->SetData(DATA_KAZROGALEVENT, DONE);
+                instance->SetBossState(DATA_KAZROGAL, DONE);
             DoPlaySoundToSet(me, SOUND_ONDEATH);
         }
 
@@ -181,6 +181,7 @@ class MarkTargetFilter
         }
 };
 
+// 31447 - Mark of Kaz'rogal
 class spell_mark_of_kazrogal : public SpellScriptLoader
 {
     public:

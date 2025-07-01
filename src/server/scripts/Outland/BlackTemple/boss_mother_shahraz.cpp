@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,7 +15,6 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "black_temple.h"
@@ -23,7 +22,7 @@
 #include "SpellAuraEffects.h"
 #include "GridNotifiers.h"
 
-enum Texts
+enum ShahrazTexts
 {
     SAY_TAUNT     = 0,
     SAY_AGGRO     = 1,
@@ -35,7 +34,7 @@ enum Texts
     EMOTE_BERSERK = 7
 };
 
-enum Spells
+enum ShahrazSpells
 {
     SPELL_FATAL_ATTRACTION_DAMAGE   = 40871,
     SPELL_SILENCING_SHRIEK          = 40823,
@@ -60,7 +59,7 @@ enum Spells
     SPELL_BEAM_SINFUL               = 40827
 };
 
-enum Events
+enum ShahrazEvents
 {
     EVENT_RANDOM_BEAM  = 1,
     EVENT_PRISMATIC_SHIELD,
@@ -96,6 +95,7 @@ uint32 const PrismaticAuras[6]=
     SPELL_PRISMATIC_AURA_HOLY
 };
 
+// 22947 - Mother Shahraz
 struct boss_mother_shahraz : public BossAI
 {
     boss_mother_shahraz(Creature* creature) : BossAI(creature, DATA_MOTHER_SHAHRAZ), _enraged(false) { }
@@ -106,9 +106,9 @@ struct boss_mother_shahraz : public BossAI
         _enraged = false;
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         events.ScheduleEvent(EVENT_SILENCING_SHRIEK, 22s);
         events.ScheduleEvent(EVENT_PRISMATIC_SHIELD, 15s);
@@ -135,7 +135,7 @@ struct boss_mother_shahraz : public BossAI
         _DespawnAtEvade();
     }
 
-    void DamageTaken(Unit* /*attacker*/, uint32 &damage) override
+    void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         if (!_enraged && me->HealthBelowPctDamaged(10, damage))
         {
@@ -152,24 +152,24 @@ struct boss_mother_shahraz : public BossAI
         {
             case EVENT_RANDOM_BEAM:
                 DoCastSelf(BeamTriggers[urand(0, 3)]);
-                events.Repeat(Seconds(30));
+                events.Repeat(30s);
                 break;
             case EVENT_PRISMATIC_SHIELD:
                 DoCastSelf(PrismaticAuras[urand(0, 5)]);
-                events.Repeat(Seconds(15));
+                events.Repeat(15s);
                 break;
             case EVENT_FATAL_ATTRACTION:
                 Talk(SAY_SPELL);
                 DoCastSelf(SPELL_FATAL_ATTRACTION_TELEPORT, { SPELLVALUE_MAX_TARGETS, 3 });
-                events.Repeat(Seconds(30));
+                events.Repeat(30s);
                 break;
             case EVENT_SILENCING_SHRIEK:
                 DoCastVictim(SPELL_SILENCING_SHRIEK);
-                events.Repeat(Seconds(18), Seconds(30));
+                events.Repeat(18s, 30s);
                 break;
             case EVENT_TAUNT:
                 Talk(SAY_TAUNT);
-                events.Repeat(Seconds(30), Seconds(40));
+                events.Repeat(30s, 40s);
                 break;
             case EVENT_BERSERK:
                 Talk(EMOTE_BERSERK, me);
@@ -249,15 +249,15 @@ class spell_mother_shahraz_saber_lash : public AuraScript
 
     bool Validate(SpellInfo const* spellInfo) override
     {
-        return ValidateSpellInfo({ spellInfo->Effects[EFFECT_1].TriggerSpell });
+        return ValidateSpellInfo({ spellInfo->GetEffect(EFFECT_1).TriggerSpell });
     }
 
     void OnTrigger(AuraEffect const* aurEff)
     {
         PreventDefaultAction();
 
-        uint32 triggerSpell = GetSpellInfo()->Effects[aurEff->GetEffIndex()].TriggerSpell;
-        if (Unit* target = GetUnitOwner()->GetAI()->SelectTarget(SELECT_TARGET_RANDOM, 0))
+        uint32 triggerSpell = aurEff->GetSpellEffectInfo().TriggerSpell;
+        if (Unit* target = GetUnitOwner()->GetAI()->SelectTarget(SelectTargetMethod::Random, 0))
             GetUnitOwner()->CastSpell(target, triggerSpell, true);
     }
 
@@ -277,15 +277,15 @@ class spell_mother_shahraz_generic_periodic : public AuraScript
 
     bool Validate(SpellInfo const* spellInfo) override
     {
-        return ValidateSpellInfo({ spellInfo->Effects[EFFECT_0].TriggerSpell });
+        return ValidateSpellInfo({ spellInfo->GetEffect(EFFECT_0).TriggerSpell });
     }
 
     void OnTrigger(AuraEffect const* aurEff)
     {
         PreventDefaultAction();
 
-        uint32 triggerSpell = GetSpellInfo()->Effects[aurEff->GetEffIndex()].TriggerSpell;
-        if (Unit* target = GetUnitOwner()->GetAI()->SelectTarget(SELECT_TARGET_RANDOM, 0))
+        uint32 triggerSpell = aurEff->GetSpellEffectInfo().TriggerSpell;
+        if (Unit* target = GetUnitOwner()->GetAI()->SelectTarget(SelectTargetMethod::Random, 0))
             GetUnitOwner()->CastSpell(target, triggerSpell, true);
     }
 
@@ -322,7 +322,7 @@ void AddSC_boss_mother_shahraz()
     RegisterBlackTempleCreatureAI(boss_mother_shahraz);
     RegisterSpellScript(spell_mother_shahraz_fatal_attraction);
     RegisterSpellScript(spell_mother_shahraz_fatal_attraction_link);
-    RegisterAuraScript(spell_mother_shahraz_saber_lash);
-    RegisterAuraScript(spell_mother_shahraz_generic_periodic);
-    RegisterAuraScript(spell_mother_shahraz_random_periodic);
+    RegisterSpellScript(spell_mother_shahraz_saber_lash);
+    RegisterSpellScript(spell_mother_shahraz_generic_periodic);
+    RegisterSpellScript(spell_mother_shahraz_random_periodic);
 }

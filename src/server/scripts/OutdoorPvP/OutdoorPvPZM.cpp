@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,7 +36,6 @@ uint32 const ZM_GRAVEYARD_ZONE = 3521;
 
 // linked when the central tower is controlled
 uint32 const ZM_GRAVEYARD_ID = 969;
-
 
 // banners 182527, 182528, 182529, gotta check them ingame
 go_type const ZM_Banner_A = { 182527, 530, { 253.54f, 7083.81f, 36.7728f, -0.017453f }, { 0.0f, 0.0f, 0.008727f, -0.999962f } };

@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,9 +20,15 @@
 
 #include "TileAssembler.h"
 #include "Banner.h"
+#include "Locales.h"
+#include "Util.h"
 
 int main(int argc, char* argv[])
 {
+    Trinity::VerifyOsVersion();
+
+    Trinity::Locale::Init();
+
     Trinity::Banner::Show("VMAP assembler", [](char const* text) { std::cout << text << std::endl; }, nullptr);
 
     std::string src = "Buildings";

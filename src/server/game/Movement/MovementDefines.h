@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,6 +22,7 @@
 
 #define SPEED_CHARGE 42.0f // assume it is 25 yard per 0.6 second
 
+// EnumUtils: DESCRIBE THIS
 enum MovementGeneratorType : uint8
 {
     IDLE_MOTION_TYPE                = 0,     // IdleMovementGenerator.h
@@ -43,8 +44,23 @@ enum MovementGeneratorType : uint8
     EFFECT_MOTION_TYPE              = 16,
     SPLINE_CHAIN_MOTION_TYPE        = 17,    // SplineChainMovementGenerator.h
     FORMATION_MOTION_TYPE           = 18,    // FormationMovementGenerator.h
-    MAX_MOTION_TYPE                          // limit
+    MAX_MOTION_TYPE                          // SKIP
 };
+
+constexpr bool CanStopMovementForSpellCasting(MovementGeneratorType type)
+{
+    // MovementGenerators that don't check Unit::IsMovementPreventedByCasting
+    switch (type)
+    {
+        case HOME_MOTION_TYPE:
+        case FLIGHT_MOTION_TYPE:
+        case EFFECT_MOTION_TYPE:    // knockbacks, jumps, falling, land/takeoff transitions
+            return false;
+        default:
+            break;
+    }
+    return true;
+}
 
 enum MovementGeneratorMode : uint8
 {

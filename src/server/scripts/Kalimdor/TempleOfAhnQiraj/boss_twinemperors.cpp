@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -61,11 +60,12 @@ enum Sound
 
 enum Misc
 {
-    PULL_RANGE                    = 50,
     ABUSE_BUG_RANGE               = 20,
     VEKLOR_DIST                   = 20,                      // VL will not come to melee when attacking
     TELEPORTTIME                  = 30000
 };
+
+static constexpr float PULL_RANGE = 50.0f;
 
 struct boss_twinemperorsAI : public BossAI
 {
@@ -113,7 +113,7 @@ struct boss_twinemperorsAI : public BossAI
         return instance->GetCreature(IAmVeklor() ? DATA_VEKNILASH : DATA_VEKLOR);
     }
 
-    void DamageTaken(Unit* /*done_by*/, uint32 &damage) override
+    void DamageTaken(Unit* /*done_by*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         Unit* pOtherBoss = GetOtherBoss();
         if (pOtherBoss)
@@ -125,7 +125,7 @@ struct boss_twinemperorsAI : public BossAI
             if (ohealth <= 0)
             {
                 pOtherBoss->setDeathState(JUST_DIED);
-                pOtherBoss->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+                pOtherBoss->SetDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
             }
         }
     }
@@ -137,7 +137,7 @@ struct boss_twinemperorsAI : public BossAI
         {
             pOtherBoss->SetHealth(0);
             pOtherBoss->setDeathState(JUST_DIED);
-            pOtherBoss->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+            pOtherBoss->SetDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
             ENSURE_AI(boss_twinemperorsAI, pOtherBoss->AI())->DontYellWhenDead = true;
         }
         if (!DontYellWhenDead)                              // I hope AI is not threaded
@@ -152,7 +152,7 @@ struct boss_twinemperorsAI : public BossAI
 
     void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Creature* pOtherBoss = GetOtherBoss();
         if (pOtherBoss)
         {
@@ -168,13 +168,13 @@ struct boss_twinemperorsAI : public BossAI
         }
     }
 
-    void SpellHit(Unit* caster, SpellInfo const* entry) override
+    void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override
     {
         if (caster == me)
             return;
 
         Creature* pOtherBoss = GetOtherBoss();
-        if (entry->Id != SPELL_HEAL_BROTHER || !pOtherBoss)
+        if (spellInfo->Id != SPELL_HEAL_BROTHER || !pOtherBoss)
             return;
 
         // add health so we keep same percentage for both brothers
@@ -426,8 +426,6 @@ public:
         {
             TwinReset();
             Initialize();
-                                                                //Added. Can be removed if its included in DB.
-            me->ApplySpellImmune(0, IMMUNITY_DAMAGE, SPELL_SCHOOL_MASK_MAGIC, true);
         }
 
         void CastSpellOnBug(Creature* target) override
@@ -456,7 +454,7 @@ public:
 
             if (UpperCut_Timer <= diff)
             {
-                Unit* randomMelee = SelectTarget(SELECT_TARGET_RANDOM, 0, NOMINAL_MELEE_RANGE, true);
+                Unit* randomMelee = SelectTarget(SelectTargetMethod::Random, 0, NOMINAL_MELEE_RANGE, true);
                 if (randomMelee)
                     DoCast(randomMelee, SPELL_UPPERCUT);
                 UpperCut_Timer = 15000 + rand32() % 15000;
@@ -516,9 +514,6 @@ public:
         {
             TwinReset();
             Initialize();
-
-            //Added. Can be removed if its included in DB.
-            me->ApplySpellImmune(0, IMMUNITY_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, true);
         }
 
         void CastSpellOnBug(Creature* target) override
@@ -555,14 +550,14 @@ public:
             //Blizzard_Timer
             if (Blizzard_Timer <= diff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 45, true))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 45, true))
                     DoCast(target, SPELL_BLIZZARD);
                 Blizzard_Timer = 15000 + rand32() % 15000;
             } else Blizzard_Timer -= diff;
 
             if (ArcaneBurst_Timer <= diff)
             {
-                if (Unit* mvic = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, NOMINAL_MELEE_RANGE, true))
+                if (Unit* mvic = SelectTarget(SelectTargetMethod::MinDistance, 0, NOMINAL_MELEE_RANGE, true))
                 {
                     DoCast(mvic, SPELL_ARCANEBURST);
                     ArcaneBurst_Timer = 5000;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,10 +19,11 @@
 #define _MAPDEFINES_H
 
 #include "Define.h"
-#include "DetourNavMesh.h"
+#include "Optional.h"
+#include <DetourNavMesh.h>
 
 const uint32 MMAP_MAGIC = 0x4d4d4150; // 'MMAP'
-#define MMAP_VERSION 9
+#define MMAP_VERSION 15
 
 struct MmapTileHeader
 {
@@ -51,17 +52,65 @@ enum NavArea
     NAV_AREA_EMPTY          = 0,
     // areas 1-60 will be used for destructible areas (currently skipped in vmaps, WMO with flag 1)
     // ground is the highest value to make recast choose ground over water when merging surfaces very close to each other (shallow water would be walkable)
-    NAV_AREA_GROUND         = 63,
-    NAV_AREA_WATER          = 62,
-    NAV_AREA_MAGMA_SLIME    = 61 // don't need to differentiate between them
+    NAV_AREA_GROUND         = 11,
+    NAV_AREA_GROUND_STEEP   = 10,
+    NAV_AREA_WATER          = 9,
+    NAV_AREA_MAGMA_SLIME    = 8, // don't need to differentiate between them
+    NAV_AREA_MAX_VALUE      = NAV_AREA_GROUND,
+    NAV_AREA_MIN_VALUE      = NAV_AREA_MAGMA_SLIME,
+    NAV_AREA_ALL_MASK       = 0x3F // max allowed value
 };
 
 enum NavTerrainFlag
 {
-    NAV_EMPTY       = 0x00,
-    NAV_GROUND      = 1 << (63 - NAV_AREA_GROUND),
-    NAV_WATER       = 1 << (63 - NAV_AREA_WATER),
-    NAV_MAGMA_SLIME = 1 << (63 - NAV_AREA_MAGMA_SLIME)
+    NAV_EMPTY        = 0x00,
+    NAV_GROUND       = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_GROUND),
+    NAV_GROUND_STEEP = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_GROUND_STEEP),
+    NAV_WATER        = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_WATER),
+    NAV_MAGMA_SLIME  = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_MAGMA_SLIME)
 };
 
-#endif /* _MAPDEFINES_H */
+enum ZLiquidStatus : uint32
+{
+    LIQUID_MAP_NO_WATER     = 0x00000000,
+    LIQUID_MAP_ABOVE_WATER  = 0x00000001,
+    LIQUID_MAP_WATER_WALK   = 0x00000002,
+    LIQUID_MAP_IN_WATER     = 0x00000004,
+    LIQUID_MAP_UNDER_WATER  = 0x00000008,
+};
+
+#define MAP_LIQUID_STATUS_SWIMMING (LIQUID_MAP_IN_WATER | LIQUID_MAP_UNDER_WATER)
+#define MAP_LIQUID_STATUS_IN_CONTACT (MAP_LIQUID_STATUS_SWIMMING | LIQUID_MAP_WATER_WALK)
+
+struct LiquidData
+{
+    uint32 type_flags;
+    uint32 entry;
+    float  level;
+    float  depth_level;
+};
+
+struct WmoLocation
+{
+    WmoLocation() = default;
+    WmoLocation(int32 groupId, int32 nameSetId, int32 rootId, uint32 uniqueId)
+        : GroupId(groupId), NameSetId(nameSetId), RootId(rootId), UniqueId(uniqueId) { }
+
+    int32 GroupId = 0;
+    int32 NameSetId = 0;
+    int32 RootId = 0;
+    uint32 UniqueId = 0;
+};
+
+struct PositionFullTerrainStatus
+{
+    PositionFullTerrainStatus() : areaId(0), floorZ(0.0f), outdoors(true), liquidStatus(LIQUID_MAP_NO_WATER) { }
+    uint32 areaId;
+    float floorZ;
+    bool outdoors;
+    ZLiquidStatus liquidStatus;
+    Optional<WmoLocation> wmoLocation;
+    Optional<LiquidData> liquidInfo;
+};
+
+#endif // _MAPDEFINES_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -48,7 +48,7 @@ namespace Trinity
     class CustomChatTextBuilder
     {
         public:
-            CustomChatTextBuilder(WorldObject const* obj, ChatMsg msgType, std::string const& text, Language language = LANG_UNIVERSAL, WorldObject const* target = nullptr)
+            CustomChatTextBuilder(WorldObject const* obj, ChatMsg msgType, std::string_view text, Language language = LANG_UNIVERSAL, WorldObject const* target = nullptr)
                 : _source(obj), _msgType(msgType), _text(text), _language(language), _target(target) { }
 
             void operator()(WorldPacket& data, LocaleConstant locale) const;

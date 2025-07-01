@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+# This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -8,9 +8,11 @@
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
+include(CheckSymbolExists)
+
 if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT NOJEM)
   # We need to generate the jemalloc_def.h header based on platform-specific settings
-  CHECK_SYMBOL_EXISTS(MADV_FREE "sys/mman.h" HAVE_MADV_FREE)
+  check_symbol_exists(MADV_FREE "sys/mman.h" HAVE_MADV_FREE)
   
   if (PLATFORM EQUAL 32)
     set(JEM_SIZEDEF 2)
@@ -26,6 +28,14 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT NOJEM)
     set(JEM_MADFREE_DEF "#define")
   else()
     set(JEM_MADFREE_DEF "#undef")
+  endif()
+
+  if(TRINITY_SYSTEM_PROCESSOR MATCHES "arm")
+    set(JEM_CPU_SPINWAIT "")
+    set(JEM_HAVE_CPU_SPINWAIT 0)
+  else()
+    set(JEM_CPU_SPINWAIT "__asm__ volatile\(\"pause\"\)")
+    set(JEM_HAVE_CPU_SPINWAIT 1)
   endif()
 
   # Create the header, so we can use it
@@ -49,7 +59,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT NOJEM)
     ${CMAKE_CURRENT_SOURCE_DIR}/src/extent_dss.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/extent_mmap.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hash.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/hooks.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hook.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/jemalloc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/jemalloc_cpp.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/large.c
@@ -62,9 +72,12 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT NOJEM)
     ${CMAKE_CURRENT_SOURCE_DIR}/src/prng.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/prof.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rtree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/safety_check.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stats.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/sc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/sz.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tcache.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/test_hooks.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ticker.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tsd.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/witness.c
@@ -78,11 +91,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT NOJEM)
       ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
   target_compile_definitions(jemalloc
-    PUBLIC
-      -DNO_BUFFERPOOL
     PRIVATE
-      -D_GNU_SOURCE
-      -D_REENTRAN)
+      _GNU_SOURCE
+      _REENTRAN)
 
   target_link_libraries(jemalloc
     PRIVATE

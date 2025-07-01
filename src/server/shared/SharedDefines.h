@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,11 +18,13 @@
 #ifndef TRINITY_SHAREDDEFINES_H
 #define TRINITY_SHAREDDEFINES_H
 
+#include "DBCEnums.h"
 #include "Define.h"
-#include "DetourNavMesh.h"
+#include "EnumFlag.h"
 #include "SmartEnum.h"
 
 float const GROUND_HEIGHT_TOLERANCE = 0.05f; // Extra tolerance to z position to check if it is in air or on ground.
+constexpr float Z_OFFSET_FIND_HEIGHT = 1.5f;
 
 enum SpellEffIndex : uint8
 {
@@ -55,6 +56,22 @@ enum Expansions
     MAX_EXPANSIONS                     = 3
 };
 
+inline uint32 GetMaxLevelForExpansion(uint32 expansion)
+{
+    switch (expansion)
+    {
+        case EXPANSION_CLASSIC:
+            return 60;
+        case EXPANSION_THE_BURNING_CRUSADE:
+            return 70;
+        case EXPANSION_WRATH_OF_THE_LICH_KING:
+            return 80;
+        default:
+            break;
+    }
+    return DEFAULT_MAX_LEVEL;
+}
+
 enum Gender
 {
     GENDER_MALE                        = 0,
@@ -63,20 +80,21 @@ enum Gender
 };
 
 // Race value is index in ChrRaces.dbc
+// EnumUtils: DESCRIBE THIS
 enum Races
 {
-    RACE_NONE               = 0,
-    RACE_HUMAN              = 1,
-    RACE_ORC                = 2,
-    RACE_DWARF              = 3,
-    RACE_NIGHTELF           = 4,
-    RACE_UNDEAD_PLAYER      = 5,
-    RACE_TAUREN             = 6,
-    RACE_GNOME              = 7,
-    RACE_TROLL              = 8,
+    RACE_NONE               = 0,  // SKIP
+    RACE_HUMAN              = 1,  // TITLE Human
+    RACE_ORC                = 2,  // TITLE Orc
+    RACE_DWARF              = 3,  // TITLE Dwarf
+    RACE_NIGHTELF           = 4,  // TITLE Night Elf
+    RACE_UNDEAD_PLAYER      = 5,  // TITLE Undead
+    RACE_TAUREN             = 6,  // TITLE Tauren
+    RACE_GNOME              = 7,  // TITLE Gnome
+    RACE_TROLL              = 8,  // TITLE Troll
     //RACE_GOBLIN             = 9,
-    RACE_BLOODELF           = 10,
-    RACE_DRAENEI            = 11
+    RACE_BLOODELF           = 10, // TITLE Blood Elf
+    RACE_DRAENEI            = 11 //, TITLE Draenei
     //RACE_FEL_ORC            = 12,
     //RACE_NAGA               = 13,
     //RACE_BROKEN             = 14,
@@ -105,20 +123,21 @@ enum Races
 #define RACEMASK_HORDE RACEMASK_ALL_PLAYABLE & ~RACEMASK_ALLIANCE
 
 // Class value is index in ChrClasses.dbc
+// EnumUtils: DESCRIBE THIS
 enum Classes
 {
-    CLASS_NONE          = 0,
-    CLASS_WARRIOR       = 1,
-    CLASS_PALADIN       = 2,
-    CLASS_HUNTER        = 3,
-    CLASS_ROGUE         = 4,
-    CLASS_PRIEST        = 5,
-    CLASS_DEATH_KNIGHT  = 6,
-    CLASS_SHAMAN        = 7,
-    CLASS_MAGE          = 8,
-    CLASS_WARLOCK       = 9,
+    CLASS_NONE          = 0, // SKIP
+    CLASS_WARRIOR       = 1, // TITLE Warrior
+    CLASS_PALADIN       = 2, // TITLE Paladin
+    CLASS_HUNTER        = 3, // TITLE Hunter
+    CLASS_ROGUE         = 4, // TITLE Rogue
+    CLASS_PRIEST        = 5, // TITLE Priest
+    CLASS_DEATH_KNIGHT  = 6, // TITLE Death Knight
+    CLASS_SHAMAN        = 7, // TITLE Shaman
+    CLASS_MAGE          = 8, // TITLE Mage
+    CLASS_WARLOCK       = 9, // TITLE Warlock
     //CLASS_UNK           = 10,
-    CLASS_DRUID         = 11
+    CLASS_DRUID         = 11 // TITLE Druid
 };
 
 // max+1 for player class
@@ -204,6 +223,7 @@ enum FactionTemplates
     FACTION_PREY                        = 31,
     FACTION_ESCORTEE_H_NEUTRAL_PASSIVE  = 33,
     FACTION_FRIENDLY                    = 35,
+    FACTION_TROLL_FROSTMANE             = 37,
     FACTION_OGRE                        = 45,
     FACTION_ORC_DRAGONMAW               = 62,
     FACTION_HORDE_GENERIC               = 83,
@@ -219,6 +239,7 @@ enum FactionTemplates
     FACTION_ESCORTEE_N_FRIEND_PASSIVE   = 290,
     FACTION_TITAN                       = 415,
     FACTION_ESCORTEE_N_FRIEND_ACTIVE    = 495,
+    FACTION_RATCHET                     = 637,
     FACTION_GOBLIN_DARK_IRON_BAR_PATRON = 736,
     FACTION_DARK_IRON_DWARVES           = 754,
     FACTION_ESCORTEE_A_PASSIVE          = 774,
@@ -235,7 +256,8 @@ enum FactionTemplates
     FACTION_ESCORTEE_H_ACTIVE           = 2046,
     FACTION_UNDEAD_SCOURGE_2            = 2068,
     FACTION_UNDEAD_SCOURGE_3            = 2084,
-    FACTION_SCARLET_CRUSADE             = 2089
+    FACTION_SCARLET_CRUSADE             = 2089,
+    FACTION_SCARLET_CRUSADE_2           = 2096
 };
 
 #define MIN_REPUTATION_RANK (REP_HATED)
@@ -274,6 +296,8 @@ enum Powers : int8
     MAX_POWERS                          = 7,  // SKIP
     POWER_ALL                           = 127 // SKIP
 };
+
+#define MAX_RUNES 6
 
 // EnumUtils: DESCRIBE THIS
 enum SpellSchools
@@ -427,14 +451,14 @@ enum SpellAttr1 : uint32
     SPELL_ATTR1_CANT_TARGET_IN_COMBAT            = 0x00000100, // TITLE Target cannot be in combat
     SPELL_ATTR1_MELEE_COMBAT_START               = 0x00000200, // TITLE Starts auto-attack (client only) DESCRIPTION Caster will begin auto-attacking the target on cast
     SPELL_ATTR1_NO_THREAT                        = 0x00000400, // TITLE Does not generate threat DESCRIPTION Also does not cause target to engage
-    SPELL_ATTR1_UNK11                            = 0x00000800, // TITLE Unknown attribute 11@Attr1 DESCRIPTION Aura?
+    SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST  = 0x00000800, // TITLE Aura will not refresh its duration when recast
     SPELL_ATTR1_IS_PICKPOCKET                    = 0x00001000, // TITLE Pickpocket (client only)
     SPELL_ATTR1_FARSIGHT                         = 0x00002000, // TITLE Farsight aura (client only)
     SPELL_ATTR1_CHANNEL_TRACK_TARGET             = 0x00004000, // TITLE Track target while channeling DESCRIPTION While channeling, adjust facing to face target
     SPELL_ATTR1_DISPEL_AURAS_ON_IMMUNITY         = 0x00008000, // TITLE Immunity cancels preapplied auras DESCRIPTION For immunity spells, cancel all auras that this spell would make you immune to when the spell is applied
     SPELL_ATTR1_UNAFFECTED_BY_SCHOOL_IMMUNE      = 0x00010000, // TITLE Unaffected by school immunities DESCRIPTION Will not pierce Divine Shield, Ice Block and other full invulnerabilities
     SPELL_ATTR1_UNAUTOCASTABLE_BY_PET            = 0x00020000, // TITLE Cannot be autocast by pet
-    SPELL_ATTR1_UNK18                            = 0x00040000, // TITLE Unknown attribute 18@Attr1 DESCRIPTION Stun, Polymorph, Daze, Hex - CC?
+    SPELL_ATTR1_PREVENTS_ANIM                    = 0x00040000, // TITLE NYI, auras apply UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT
     SPELL_ATTR1_CANT_TARGET_SELF                 = 0x00080000, // TITLE Cannot be self-cast
     SPELL_ATTR1_REQ_COMBO_POINTS1                = 0x00100000, // TITLE Requires combo points (type 1)
     SPELL_ATTR1_UNK21                            = 0x00200000, // TITLE Unknown attribute 21@Attr1
@@ -442,7 +466,7 @@ enum SpellAttr1 : uint32
     SPELL_ATTR1_UNK23                            = 0x00800000, // TITLE Unknwon attribute 23@Attr1
     SPELL_ATTR1_IS_FISHING                       = 0x01000000, // TITLE Fishing (client only)
     SPELL_ATTR1_UNK25                            = 0x02000000, // TITLE Unknown attribute 25@Attr1
-    SPELL_ATTR1_UNK26                            = 0x04000000, // TITLE Unknown attribute 26@Attr1 DESCRIPTION Related to [target=focus] and [target=mouseover] macros?
+    SPELL_ATTR1_REQUIRE_ALL_TARGETS              = 0x04000000, // TITLE Require All Targets
     SPELL_ATTR1_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr1 DESCRIPTION Melee spell?
     SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR         = 0x10000000, // TITLE Hide in aura bar (client only)
     SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME       = 0x20000000, // TITLE Show spell name during channel (client only)
@@ -456,7 +480,7 @@ enum SpellAttr2 : uint32
     SPELL_ATTR2_CAN_TARGET_DEAD                  = 0x00000001, // TITLE Can target dead players or corpses
     SPELL_ATTR2_UNK1                             = 0x00000002, // TITLE Unknown attribute 1@Attr2
     SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS            = 0x00000004, // TITLE Ignore Line of Sight
-    SPELL_ATTR2_UNK3                             = 0x00000008, // TITLE Ignore aura scaling
+    SPELL_ATTR2_ALLOW_LOW_LEVEL_BUFF             = 0x00000008, // TITLE Allow Low Level Buff
     SPELL_ATTR2_DISPLAY_IN_STANCE_BAR            = 0x00000010, // TITLE Show in stance bar (client only)
     SPELL_ATTR2_AUTOREPEAT_FLAG                  = 0x00000020, // TITLE Ranged auto-attack spell
     SPELL_ATTR2_CANT_TARGET_TAPPED               = 0x00000040, // TITLE Cannot target others' tapped units DESCRIPTION Can only target untapped units, or those tapped by caster
@@ -474,7 +498,7 @@ enum SpellAttr2 : uint32
     SPELL_ATTR2_REQ_DEAD_PET                     = 0x00040000, // TITLE Requires dead pet
     SPELL_ATTR2_NOT_NEED_SHAPESHIFT              = 0x00080000, // TITLE Also allow outside shapeshift DESCRIPTION Even if Stances are nonzero, allow spell to be cast outside of shapeshift (though not in a different shapeshift)
     SPELL_ATTR2_UNK20                            = 0x00100000, // TITLE Unknown attribute 20@Attr2
-    SPELL_ATTR2_DAMAGE_REDUCED_SHIELD            = 0x00200000, // TITLE Damage reduction ability DESCRIPTION Causes BG flags to be dropped if combined with ATTR1_DISPEL_AURAS_ON_IMMUNITY
+    SPELL_ATTR2_FAIL_ON_ALL_TARGETS_IMMUNE       = 0x00200000, // TITLE Fail on all targets immune DESCRIPTION Causes BG flags to be dropped if combined with ATTR1_DISPEL_AURAS_ON_IMMUNITY
     SPELL_ATTR2_UNK22                            = 0x00400000, // TITLE Unknown attribute 22@Attr2
     SPELL_ATTR2_IS_ARCANE_CONCENTRATION          = 0x00800000, // TITLE Arcane Concentration
     SPELL_ATTR2_UNK24                            = 0x01000000, // TITLE Unknown attribute 24@Attr2
@@ -483,7 +507,7 @@ enum SpellAttr2 : uint32
     SPELL_ATTR2_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr2
     SPELL_ATTR2_UNK28                            = 0x10000000, // TITLE Unknown attribute 28@Attr2
     SPELL_ATTR2_CANT_CRIT                        = 0x20000000, // TITLE Cannot critically strike
-    SPELL_ATTR2_TRIGGERED_CAN_TRIGGER_PROC       = 0x40000000, // TITLE Allow triggered spell to trigger (type 1) DESCRIPTION Without this attribute, any triggered spell will be unable to trigger other auras' procs
+    SPELL_ATTR2_ACTIVE_THREAT                    = 0x40000000, // TITLE Active Threat
     SPELL_ATTR2_FOOD_BUFF                        = 0x80000000  // TITLE Food buff (client only)
 };
 
@@ -493,13 +517,13 @@ enum SpellAttr3 : uint32
     SPELL_ATTR3_UNK0                             = 0x00000001, // TITLE Unknown attribute 0@Attr3
     SPELL_ATTR3_IGNORE_PROC_SUBCLASS_MASK        = 0x00000002, //  1 Ignores subclass mask check when checking proc
     SPELL_ATTR3_UNK2                             = 0x00000004, // TITLE Unknown attribute 2@Attr3
-    SPELL_ATTR3_BLOCKABLE_SPELL                  = 0x00000008, // TITLE Blockable spell
+    SPELL_ATTR3_COMPLETELY_BLOCKED               = 0x00000008, // TITLE Completely Blocked
     SPELL_ATTR3_IGNORE_RESURRECTION_TIMER        = 0x00000010, // TITLE Ignore resurrection timer
     SPELL_ATTR3_UNK5                             = 0x00000020, // TITLE Unknown attribute 5@Attr3
     SPELL_ATTR3_UNK6                             = 0x00000040, // TITLE Unknown attribute 6@Attr3
     SPELL_ATTR3_STACK_FOR_DIFF_CASTERS           = 0x00000080, // TITLE Stack separately for each caster
     SPELL_ATTR3_ONLY_TARGET_PLAYERS              = 0x00000100, // TITLE Can only target players
-    SPELL_ATTR3_TRIGGERED_CAN_TRIGGER_PROC_2     = 0x00000200, // TITLE Allow triggered spell to trigger (type 2) DESCRIPTION Without this attribute, any triggered spell will be unable to trigger other auras' procs
+    SPELL_ATTR3_NOT_A_PROC                       = 0x00000200, // TITLE Not a Proc DESCRIPTION Without this attribute, any triggered spell will be unable to trigger other auras' procs
     SPELL_ATTR3_MAIN_HAND                        = 0x00000400, // TITLE Require main hand weapon
     SPELL_ATTR3_BATTLEGROUND                     = 0x00000800, // TITLE Can only be cast in battleground
     SPELL_ATTR3_ONLY_TARGET_GHOSTS               = 0x00001000, // TITLE Can only target ghost players
@@ -516,7 +540,7 @@ enum SpellAttr3 : uint32
     SPELL_ATTR3_UNK23                            = 0x00800000, // TITLE Unknown attribute 23@Attr3
     SPELL_ATTR3_REQ_OFFHAND                      = 0x01000000, // TITLE Requires offhand weapon
     SPELL_ATTR3_TREAT_AS_PERIODIC                = 0x02000000, // TITLE Treat as periodic effect
-    SPELL_ATTR3_CAN_PROC_WITH_TRIGGERED          = 0x04000000, // TITLE Can trigger from triggered spells
+    SPELL_ATTR3_CAN_PROC_FROM_PROCS              = 0x04000000, // TITLE Can Proc From Procs
     SPELL_ATTR3_DRAIN_SOUL                       = 0x08000000, // TITLE Drain Soul
     SPELL_ATTR3_UNK28                            = 0x10000000, // TITLE Unknown attribute 28@Attr3
     SPELL_ATTR3_NO_DONE_BONUS                    = 0x20000000, // TITLE Damage dealt is unaffected by modifiers
@@ -548,13 +572,13 @@ enum SpellAttr4 : uint32
     SPELL_ATTR4_AREA_TARGET_CHAIN                = 0x00040000, // TITLE Chain area targets DESCRIPTION [NYI] Hits area targets over time instead of all at once
     SPELL_ATTR4_UNK19                            = 0x00080000, // TITLE Unknown attribute 19@Attr4
     SPELL_ATTR4_NOT_CHECK_SELFCAST_POWER         = 0x00100000, // TITLE Allow self-cast to override stronger aura (client only)
-    SPELL_ATTR4_UNK21                            = 0x00200000, // TITLE Keep when entering arena
+    SPELL_ATTR4_DONT_REMOVE_IN_ARENA             = 0x00200000, // TITLE Keep when entering arena
     SPELL_ATTR4_UNK22                            = 0x00400000, // TITLE Unknown attribute 22@Attr4
     SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS         = 0x00800000, // TITLE Cannot trigger item spells
     SPELL_ATTR4_UNK24                            = 0x01000000, // TITLE Unknown attribute 24@Attr4 DESCRIPTION Shoot-type spell?
     SPELL_ATTR4_IS_PET_SCALING                   = 0x02000000, // TITLE Pet Scaling aura
     SPELL_ATTR4_CAST_ONLY_IN_OUTLAND             = 0x04000000, // TITLE Only in Outland/Northrend
-    SPELL_ATTR4_INHERIT_CRIT_FROM_AURA           = 0x08000000, // TITLE Inherit critical chance from triggering aura
+    SPELL_ATTR4_FORCE_DISPLAY_CASTBAR            = 0x08000000, // TITLE Force Display Castbar
     SPELL_ATTR4_UNK28                            = 0x10000000, // TITLE Unknown attribute 28@Attr4
     SPELL_ATTR4_UNK29                            = 0x20000000, // TITLE Unknown attribute 29@Attr4
     SPELL_ATTR4_UNK30                            = 0x40000000, // TITLE Unknown attribute 30@Attr4
@@ -572,13 +596,13 @@ enum SpellAttr5 : uint32
     SPELL_ATTR5_SINGLE_TARGET_SPELL              = 0x00000020, // TITLE Single-target aura DESCRIPTION Remove previous application to another unit if applied
     SPELL_ATTR5_UNK6                             = 0x00000040, // TITLE Unknown attribute 6@Attr5
     SPELL_ATTR5_UNK7                             = 0x00000080, // TITLE Unknown attribute 7@Attr5
-    SPELL_ATTR5_UNK8                             = 0x00000100, // TITLE Unknown attribute 8@Attr5
+    SPELL_ATTR5_CANT_TARGET_PLAYER_CONTROLLED    = 0x00000100, // TITLE Cannot target player controlled units but can target players
     SPELL_ATTR5_START_PERIODIC_AT_APPLY          = 0x00000200, // TITLE Immediately do periodic tick on apply
     SPELL_ATTR5_HIDE_DURATION                    = 0x00000400, // TITLE Do not send aura duration to client
     SPELL_ATTR5_ALLOW_TARGET_OF_TARGET_AS_TARGET = 0x00000800, // TITLE Auto-target target of target (client only)
     SPELL_ATTR5_UNK12                            = 0x00001000, // TITLE Unknown attribute 12@Attr5 DESCRIPTION Cleave related?
     SPELL_ATTR5_HASTE_AFFECT_DURATION            = 0x00002000, // TITLE Duration scales with Haste Rating
-    SPELL_ATTR5_UNK14                            = 0x00004000, // TITLE Unknown attribute 14@Attr5
+    SPELL_ATTR5_NOT_USABLE_WHILE_CHARMED         = 0x00004000, // TITLE Charmed units cannot cast this spell
     SPELL_ATTR5_UNK15                            = 0x00008000, // TITLE Unknown attribute 15@Attr5 DESCRIPTION Related to multi-target spells?
     SPELL_ATTR5_UNK16                            = 0x00010000, // TITLE Unknown attribute 16@Attr5
     SPELL_ATTR5_USABLE_WHILE_FEARED              = 0x00020000, // TITLE Usable while feared
@@ -640,7 +664,7 @@ enum SpellAttr7 : uint32
 {
     SPELL_ATTR7_UNK0                             = 0x00000001, // TITLE Unknown attribute 0@Attr7
     SPELL_ATTR7_IGNORE_DURATION_MODS             = 0x00000002, // TITLE Ignore duration modifiers
-    SPELL_ATTR7_REACTIVATE_AT_RESURRECT          = 0x00000004, // TITLE Reactivate at resurrect (client only)
+    SPELL_ATTR7_DISABLE_AURA_WHILE_DEAD          = 0x00000004, // TITLE Disable Aura While Dead
     SPELL_ATTR7_IS_CHEAT_SPELL                   = 0x00000008, // TITLE Is cheat spell DESCRIPTION Cannot cast if caster doesn't have UnitFlag2 & UNIT_FLAG2_ALLOW_CHEAT_SPELLS
     SPELL_ATTR7_UNK4                             = 0x00000010, // TITLE Unknown attribute 4@Attr7 DESCRIPTION Soulstone related?
     SPELL_ATTR7_SUMMON_PLAYER_TOTEM              = 0x00000020, // TITLE Summons player-owned totem
@@ -661,11 +685,11 @@ enum SpellAttr7 : uint32
     SPELL_ATTR7_UNK20                            = 0x00100000, // TITLE Unknown attribute 20@Attr7 DESCRIPTION Invulnerability related?
     SPELL_ATTR7_UNK21                            = 0x00200000, // TITLE Unknown attribute 21@Attr7
     SPELL_ATTR7_IGNORE_COLD_WEATHER_FLYING       = 0x00400000, // TITLE Ignore cold weather flying restriction DESCRIPTION Set for loaner mounts, allows them to be used despite lacking required flight skill
-    SPELL_ATTR7_UNK23                            = 0x00800000, // TITLE Unknown attribute 23@Attr7
-    SPELL_ATTR7_UNK24                            = 0x01000000, // TITLE Unknown attribute 24@Attr7
-    SPELL_ATTR7_UNK25                            = 0x02000000, // TITLE Unknown attribute 25@Attr7
+    SPELL_ATTR7_CANT_DODGE                       = 0x00800000, // TITLE Spell cannot be dodged
+    SPELL_ATTR7_CANT_PARRY                       = 0x01000000, // TITLE Spell cannot be parried
+    SPELL_ATTR7_CANT_MISS                        = 0x02000000, // TITLE Spell cannot be missed
     SPELL_ATTR7_UNK26                            = 0x04000000, // TITLE Unknown attribute 26@Attr7
-    SPELL_ATTR7_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr7
+    SPELL_ATTR7_BYPASS_NO_RESURRECT_AURA         = 0x08000000, // TITLE Bypasses the prevent resurrection aura
     SPELL_ATTR7_CONSOLIDATED_RAID_BUFF           = 0x10000000, // TITLE Consolidate in raid buff frame (client only)
     SPELL_ATTR7_UNK29                            = 0x20000000, // TITLE Unknown attribute 29@Attr7
     SPELL_ATTR7_UNK30                            = 0x40000000, // TITLE Unknown attribute 30@Attr7
@@ -779,6 +803,7 @@ enum Team
 
 enum SpellEffects
 {
+    SPELL_EFFECT_NONE                               = 0,
     SPELL_EFFECT_INSTAKILL                          = 1,
     SPELL_EFFECT_SCHOOL_DAMAGE                      = 2,
     SPELL_EFFECT_DUMMY                              = 3,
@@ -946,7 +971,8 @@ enum SpellEffects
     TOTAL_SPELL_EFFECTS                             = 165
 };
 
-enum SpellCastResult
+// EnumUtils: DESCRIBE THIS
+enum SpellCastResult : uint8
 {
     SPELL_FAILED_SUCCESS = 0,
     SPELL_FAILED_AFFECTING_COMBAT = 1,
@@ -1285,6 +1311,7 @@ enum GhostVisibilityType
 };
 
 // Spell aura states
+// EnumUtils: DESCRIBE THIS
 enum AuraStateType
 {   // (C) used in caster aura state     (T) used in target aura state
     // (c) used in caster aura state-not (t) used in target aura state-not
@@ -1402,15 +1429,14 @@ enum SpellImmunity
     MAX_SPELL_IMMUNITY
 };
 
-
 // target enum name consist of:
 // TARGET_[OBJECT_TYPE]_[REFERENCE_TYPE(skipped for caster)]_[SELECTION_TYPE(skipped for default)]_[additional specifiers(friendly, BACK_LEFT, etc.]
 enum Targets
 {
     TARGET_UNIT_CASTER                 = 1,
     TARGET_UNIT_NEARBY_ENEMY           = 2,
-    TARGET_UNIT_NEARBY_PARTY           = 3,
-    TARGET_UNIT_NEARBY_ALLY            = 4,
+    TARGET_UNIT_NEARBY_ALLY            = 3,
+    TARGET_UNIT_NEARBY_PARTY           = 4,
     TARGET_UNIT_PET                    = 5,
     TARGET_UNIT_TARGET_ENEMY           = 6,
     TARGET_UNIT_SRC_AREA_ENTRY         = 7,
@@ -1614,6 +1640,8 @@ enum GameObjectFlags
     GO_FLAG_DESTROYED       = 0x00000400
 };
 
+DEFINE_ENUM_FLAG(GameObjectFlags);
+
 enum GameObjectDynamicLowFlags
 {
     GO_DYNFLAG_LO_ACTIVATE          = 0x01,                 // enables interaction with GO
@@ -1628,7 +1656,7 @@ enum GOState : uint8
 {
     GO_STATE_ACTIVE             = 0,                        // show in world as used and not reset (closed door open)
     GO_STATE_READY              = 1,                        // show in world as ready (closed door close)
-    GO_STATE_ACTIVE_ALTERNATIVE = 2                         // show in world as used in alt way and not reset (closed door open by cannon fire)
+    GO_STATE_DESTROYED          = 2                         // show the object in-game as already used and not yet reset (e.g. door opened by a cannon blast)
 };
 
 #define MAX_GO_STATE              3
@@ -1899,9 +1927,10 @@ enum TextEmotes
 };
 
 // Emotes.dbc
-enum Emote
+// EnumUtils: DESCRIBE THIS
+enum Emote : uint32
 {
-    EMOTE_ONESHOT_NONE                  = 0,
+    EMOTE_ONESHOT_NONE                  = 0, // SKIP
     EMOTE_ONESHOT_TALK                  = 1,
     EMOTE_ONESHOT_BOW                   = 2,
     EMOTE_ONESHOT_WAVE                  = 3,
@@ -2593,7 +2622,8 @@ enum LockKeyType
 {
     LOCK_KEY_NONE  = 0,
     LOCK_KEY_ITEM  = 1,
-    LOCK_KEY_SKILL = 2
+    LOCK_KEY_SKILL = 2,
+    LOCK_KEY_SPELL = 3,
 };
 
 enum LockType
@@ -2692,29 +2722,29 @@ enum CreatureFamily
 
 enum CreatureTypeFlags
 {
-    CREATURE_TYPE_FLAG_TAMEABLE_PET                         = 0x00000001,   // Makes the mob tameable (must also be a beast and have family set)
-    CREATURE_TYPE_FLAG_GHOST_VISIBLE                        = 0x00000002,   // Creature are also visible for not alive player. Allow gossip interaction if npcflag allow?
+    CREATURE_TYPE_FLAG_TAMEABLE                             = 0x00000001,   // Makes the mob tameable (must also be a beast and have family set)
+    CREATURE_TYPE_FLAG_VISIBLE_TO_GHOSTS                    = 0x00000002,   // Creature is also visible for not alive player. Allows gossip interaction if npcflag allows?
     CREATURE_TYPE_FLAG_BOSS_MOB                             = 0x00000004,   // Changes creature's visible level to "??" in the creature's portrait - Immune Knockback.
-    CREATURE_TYPE_FLAG_DO_NOT_PLAY_WOUND_PARRY_ANIMATION    = 0x00000008,
-    CREATURE_TYPE_FLAG_HIDE_FACTION_TOOLTIP                 = 0x00000010,
-    CREATURE_TYPE_FLAG_UNK5                                 = 0x00000020,   // Sound related
+    CREATURE_TYPE_FLAG_DO_NOT_PLAY_WOUND_ANIM               = 0x00000008,   // Does not play wound animation on parry
+    CREATURE_TYPE_FLAG_NO_FACTION_TOOLTIP                   = 0x00000010,
+    CREATURE_TYPE_FLAG_MORE_AUDIBLE                         = 0x00000020,   // Sound related
     CREATURE_TYPE_FLAG_SPELL_ATTACKABLE                     = 0x00000040,
-    CREATURE_TYPE_FLAG_CAN_INTERACT_WHILE_DEAD              = 0x00000080,   // Player can interact with the creature if its dead (not player dead)
-    CREATURE_TYPE_FLAG_HERB_SKINNING_SKILL                  = 0x00000100,   // Can be looted by herbalist
-    CREATURE_TYPE_FLAG_MINING_SKINNING_SKILL                = 0x00000200,   // Can be looted by miner
-    CREATURE_TYPE_FLAG_DO_NOT_LOG_DEATH                     = 0x00000400,   // Death event will not show up in combat log
-    CREATURE_TYPE_FLAG_MOUNTED_COMBAT_ALLOWED               = 0x00000800,   // Creature can remain mounted when entering combat
+    CREATURE_TYPE_FLAG_INTERACT_WHILE_DEAD                  = 0x00000080,   // Player can interact with the creature if creature is dead (not if player is dead)
+    CREATURE_TYPE_FLAG_SKIN_WITH_HERBALISM                  = 0x00000100,   // Can be looted by herbalist
+    CREATURE_TYPE_FLAG_SKIN_WITH_MINING                     = 0x00000200,   // Can be looted by miner
+    CREATURE_TYPE_FLAG_NO_DEATH_MESSAGE                     = 0x00000400,   // Death event will not show up in combat log
+    CREATURE_TYPE_FLAG_ALLOW_MOUNTED_COMBAT                 = 0x00000800,   // Creature can remain mounted when entering combat
     CREATURE_TYPE_FLAG_CAN_ASSIST                           = 0x00001000,   // ? Can aid any player in combat if in range?
-    CREATURE_TYPE_FLAG_IS_PET_BAR_USED                      = 0x00002000,
+    CREATURE_TYPE_FLAG_NO_PET_BAR                           = 0x00002000,
     CREATURE_TYPE_FLAG_MASK_UID                             = 0x00004000,
-    CREATURE_TYPE_FLAG_ENGINEERING_SKINNING_SKILL           = 0x00008000,   // Can be looted by engineer
-    CREATURE_TYPE_FLAG_EXOTIC_PET                           = 0x00010000,   // Can be tamed by hunter as exotic pet
-    CREATURE_TYPE_FLAG_USE_DEFAULT_COLLISION_BOX            = 0x00020000,   // Collision related. (always using default collision box?)
-    CREATURE_TYPE_FLAG_IS_SIEGE_WEAPON                      = 0x00040000,
-    CREATURE_TYPE_FLAG_CAN_COLLIDE_WITH_MISSILES            = 0x00080000,   // Projectiles can collide with this creature - interacts with TARGET_DEST_TRAJ
-    CREATURE_TYPE_FLAG_HIDE_NAME_PLATE                      = 0x00100000,
+    CREATURE_TYPE_FLAG_SKIN_WITH_ENGINEERING                = 0x00008000,   // Can be looted by engineer
+    CREATURE_TYPE_FLAG_TAMEABLE_EXOTIC                      = 0x00010000,   // Can be tamed by hunter as exotic pet
+    CREATURE_TYPE_FLAG_USE_MODEL_COLLISION_SIZE             = 0x00020000,   // Collision related. (always using default collision box?)
+    CREATURE_TYPE_FLAG_ALLOW_INTERACTION_WHILE_IN_COMBAT    = 0x00040000,
+    CREATURE_TYPE_FLAG_COLLIDE_WITH_MISSILES                = 0x00080000,   // Projectiles can collide with this creature - interacts with TARGET_DEST_TRAJ
+    CREATURE_TYPE_FLAG_NO_NAME_PLATE                        = 0x00100000,
     CREATURE_TYPE_FLAG_DO_NOT_PLAY_MOUNTED_ANIMATIONS       = 0x00200000,
-    CREATURE_TYPE_FLAG_IS_LINK_ALL                          = 0x00400000,
+    CREATURE_TYPE_FLAG_LINK_ALL                             = 0x00400000,
     CREATURE_TYPE_FLAG_INTERACT_ONLY_WITH_CREATOR           = 0x00800000,
     CREATURE_TYPE_FLAG_DO_NOT_PLAY_UNIT_EVENT_SOUNDS        = 0x01000000,
     CREATURE_TYPE_FLAG_HAS_NO_SHADOW_BLOB                   = 0x02000000,
@@ -2723,7 +2753,7 @@ enum CreatureTypeFlags
     CREATURE_TYPE_FLAG_DO_NOT_SHEATHE                       = 0x10000000,
     CREATURE_TYPE_FLAG_DO_NOT_TARGET_ON_INTERACTION         = 0x20000000,
     CREATURE_TYPE_FLAG_DO_NOT_RENDER_OBJECT_NAME            = 0x40000000,
-    CREATURE_TYPE_FLAG_UNIT_IS_QUEST_BOSS                   = 0x80000000    // Not verified
+    CREATURE_TYPE_FLAG_QUEST_BOSS                           = 0x80000000    // Not verified
 };
 
 enum CreatureEliteType
@@ -2733,7 +2763,14 @@ enum CreatureEliteType
     CREATURE_ELITE_RAREELITE       = 2,
     CREATURE_ELITE_WORLDBOSS       = 3,
     CREATURE_ELITE_RARE            = 4,
-    CREATURE_UNKNOWN               = 5                      // found in 2.2.3 for 2 mobs
+    CREATURE_ELITE_TRIVIAL         = 5                      // found in 2.2.3 for 2 mobs
+};
+
+enum class StringIdType : int32
+{
+    Template    = 0,
+    Spawn       = 1,
+    Script      = 2
 };
 
 // values based at Holidays.dbc
@@ -3108,6 +3145,7 @@ enum CorpseDynFlags
 
 #define PLAYER_CORPSE_LOOT_ENTRY 1
 
+// EnumUtils: DESCRIBE THIS
 enum WeatherType
 {
     WEATHER_TYPE_FINE       = 0,
@@ -3120,9 +3158,10 @@ enum WeatherType
 
 #define MAX_WEATHER_TYPE 4
 
-enum ChatMsg
+// EnumUtils: DESCRIBE THIS
+enum ChatMsg : uint8
 {
-    CHAT_MSG_ADDON                  = 0xFFFFFFFF, // -1
+    CHAT_MSG_ADDON                  = 0xFF, // -1
     CHAT_MSG_SYSTEM                 = 0x00,
     CHAT_MSG_SAY                    = 0x01,
     CHAT_MSG_PARTY                  = 0x02,
@@ -3189,17 +3228,17 @@ enum ChatLinkColors : uint32
     CHAT_LINK_COLOR_GLYPH       = 0xff66bbff
 };
 
-// Values from ItemPetFood (power of (value-1) used for compare with CreatureFamilyEntry.petDietMask
+// Values from ItemPetFood (power of (value-1) used for compare with CreatureFamilyEntry.PetFoodMask
 enum PetDiet
 {
-    PET_DIET_MEAT     = 1,
-    PET_DIET_FISH     = 2,
-    PET_DIET_CHEESE   = 3,
-    PET_DIET_BREAD    = 4,
-    PET_DIET_FUNGAS   = 5,
-    PET_DIET_FRUIT    = 6,
-    PET_DIET_RAW_MEAT = 7,
-    PET_DIET_RAW_FISH = 8
+    PET_DIET_MEAT       = 1,
+    PET_DIET_FISH       = 2,
+    PET_DIET_CHEESE     = 3,
+    PET_DIET_BREAD      = 4,
+    PET_DIET_FUNGAS     = 5,
+    PET_DIET_FRUIT      = 6,
+    PET_DIET_RAW_MEAT   = 7,
+    PET_DIET_RAW_FISH   = 8
 };
 
 #define MAX_PET_DIET 9
@@ -3284,6 +3323,22 @@ enum SummonType
     SUMMON_TYPE_LIGHTWELL   = 11,
     SUMMON_TYPE_JEEVES      = 12
 };
+
+enum SummonSlot
+{
+    SUMMON_SLOT_PET                 = 0,
+    SUMMON_SLOT_TOTEM_FIRE          = 1,
+    SUMMON_SLOT_TOTEM_EARTH         = 2,
+    SUMMON_SLOT_TOTEM_WATER         = 3,
+    SUMMON_SLOT_TOTEM_AIR           = 4,
+    SUMMON_SLOT_MINIPET             = 5,
+    SUMMON_SLOT_QUEST               = 6,
+
+    MAX_SUMMON_SLOT
+};
+
+#define MAX_TOTEM_SLOT      5
+#define MAX_GAMEOBJECT_SLOT 4
 
 enum EventId
 {
@@ -3418,6 +3473,13 @@ enum ResponseCodes
     CHAR_NAME_DECLENSION_DOESNT_MATCH_BASE_NAME            = 103
 };
 
+enum ComplaintStatus : uint8
+{
+    COMPLAINT_DISABLED                      = 0,
+    COMPLAINT_ENABLED_WITHOUT_AUTO_IGNORE   = 1,
+    COMPLAINT_ENABLED_WITH_AUTO_IGNORE      = 2
+};
+
 /// Ban function modes
 enum BanMode
 {
@@ -3497,6 +3559,23 @@ enum MailResponseResult
     MAIL_ERR_TOO_MANY_ATTACHMENTS      = 18,
     MAIL_ERR_MAIL_ATTACHMENT_INVALID   = 19,
     MAIL_ERR_ITEM_HAS_EXPIRED          = 21
+};
+
+enum PetTameFailure
+{
+    PETTAME_INVALIDCREATURE         = 1,
+    PETTAME_TOOMANY                 = 2,
+    PETTAME_CREATUREALREADYOWNED    = 3,
+    PETTAME_NOTTAMEABLE             = 4,
+    PETTAME_ANOTHERSUMMONACTIVE     = 5,
+    PETTAME_UNITSCANTTAME           = 6,
+    PETTAME_NOPETAVAILABLE          = 7,
+    PETTAME_INTERNALERROR           = 8,
+    PETTAME_TOOHIGHLEVEL            = 9,
+    PETTAME_DEAD                    = 10,
+    PETTAME_NOTDEAD                 = 11,
+    PETTAME_CANTCONTROLEXOTIC       = 12,
+    PETTAME_UNKNOWNERROR            = 13
 };
 
 // EnumUtils: DESCRIBE THIS
@@ -3591,22 +3670,31 @@ enum DuelCompleteType : uint8
     DUEL_FLED        = 2
 };
 
-// handle the queue types and bg types separately to enable joining queue for different sized arenas at the same time
-enum BattlegroundQueueTypeId
+struct BattlegroundQueueTypeId
 {
-    BATTLEGROUND_QUEUE_NONE     = 0,
-    BATTLEGROUND_QUEUE_AV       = 1,
-    BATTLEGROUND_QUEUE_WS       = 2,
-    BATTLEGROUND_QUEUE_AB       = 3,
-    BATTLEGROUND_QUEUE_EY       = 4,
-    BATTLEGROUND_QUEUE_SA       = 5,
-    BATTLEGROUND_QUEUE_IC       = 6,
-    BATTLEGROUND_QUEUE_RB       = 7,
-    BATTLEGROUND_QUEUE_2v2      = 8,
-    BATTLEGROUND_QUEUE_3v3      = 9,
-    BATTLEGROUND_QUEUE_5v5      = 10,
-    MAX_BATTLEGROUND_QUEUE_TYPES
+    uint16 BattlemasterListId;
+    uint8 BracketId;
+    uint8 TeamSize;
+
+    static constexpr BattlegroundQueueTypeId FromPacked(uint64 packedQueueId)
+    {
+        return { .BattlemasterListId = uint16((packedQueueId >> 16) & 0xFFFF), .BracketId = uint8((packedQueueId >> 8) & 0x7F), .TeamSize = uint8(packedQueueId & 0x7F) };
+    }
+
+    constexpr uint64 GetPacked() const
+    {
+        return (uint64(BattlemasterListId) << 16)
+            | (uint64(BracketId & 0xFF) << 8)
+            | (uint64(TeamSize & 0x3F))
+            | UI64LIT(0x1F90000000000000);
+    }
+
+    constexpr bool operator==(BattlegroundQueueTypeId const& right) const = default;
+
+    constexpr std::strong_ordering operator<=>(BattlegroundQueueTypeId const& right) const = default;
 };
+
+constexpr BattlegroundQueueTypeId BATTLEGROUND_QUEUE_NONE = { 0, 0, 0 };
 
 enum GroupJoinBattlegroundResult
 {
@@ -3729,6 +3817,86 @@ enum LineOfSightChecks
 
     LINEOFSIGHT_ALL_CHECKS      = (LINEOFSIGHT_CHECK_VMAP | LINEOFSIGHT_CHECK_GOBJECT)
 };
+
+enum ServerProcessTypes
+{
+    SERVER_PROCESS_AUTHSERVER = 0,
+    SERVER_PROCESS_WORLDSERVER = 1,
+
+    NUM_SERVER_PROCESS_TYPES
+};
+
+enum class MountResult : uint32
+{
+    InvalidMountee = 0,
+    TooFarAway     = 1,
+    AlreadyMounted = 2,
+    NotMountable   = 3,
+    NotYourPet     = 4,
+    Other          = 5,
+    Looting        = 6,
+    RaceCantMount  = 7,
+    Shapeshifted   = 8,
+    ForcedDismount = 9,
+    Ok             = 10 // never sent
+};
+
+enum AreaId : uint32
+{
+    AREA_WINTERGRASP                = 4197,
+    AREA_THE_SUNKEN_RING            = 4538,
+    AREA_THE_BROKEN_TEMPLATE        = 4539,
+    AREA_WINTERGRASP_FORTRESS       = 4575,
+    AREA_THE_CHILLED_QUAGMIRE       = 4589,
+    AREA_WESTPARK_WORKSHOP          = 4611,
+    AREA_EASTPARK_WORKSHOP          = 4612,
+};
+
+enum WorldState : uint32
+{
+    WS_BATTLEFIELD_WG_VEHICLE_H        = 3490,
+    WS_BATTLEFIELD_WG_MAX_VEHICLE_H    = 3491,
+    WS_BATTLEFIELD_WG_VEHICLE_A        = 3680,
+    WS_BATTLEFIELD_WG_MAX_VEHICLE_A    = 3681,
+    WS_BATTLEFIELD_WG_WORKSHOP_K_W     = 3698,
+    WS_BATTLEFIELD_WG_WORKSHOP_K_E     = 3699,
+    WS_BATTLEFIELD_WG_WORKSHOP_NW      = 3700,
+    WS_BATTLEFIELD_WG_WORKSHOP_NE      = 3701,
+    WS_BATTLEFIELD_WG_WORKSHOP_SW      = 3702,
+    WS_BATTLEFIELD_WG_WORKSHOP_SE      = 3703,
+    WS_BATTLEFIELD_WG_SHOW_WORLDSTATE  = 3710,
+    WS_BATTLEFIELD_WG_TIME_BATTLE_END  = 3781,
+    WS_BATTLEFIELD_WG_ACTIVE           = 3801,
+    WS_BATTLEFIELD_WG_DEFENDER         = 3802,
+    WS_BATTLEFIELD_WG_ATTACKER         = 3803,
+    WS_BATTLEFIELD_WG_ATTACKED_H       = 4022,
+    WS_BATTLEFIELD_WG_ATTACKED_A       = 4023,
+    WS_BATTLEFIELD_WG_DEFENDED_H       = 4024,
+    WS_BATTLEFIELD_WG_DEFENDED_A       = 4025,
+    WS_BATTLEFIELD_WG_TIME_NEXT_BATTLE = 4354,
+
+    WS_ARENA_DISTRIBUTION_TIME  = 20001,                     // Next arena distribution time
+    WS_WEEKLY_QUEST_RESET_TIME  = 20002,                     // Next weekly quest reset time
+    WS_BG_DAILY_RESET_TIME      = 20003,                     // Next daily BG reset time
+    WS_CLEANING_FLAGS           = 20004,                     // Cleaning Flags
+    WS_GUILD_DAILY_RESET_TIME   = 20006,                     // Next guild cap reset time
+    WS_MONTHLY_QUEST_RESET_TIME = 20007,                     // Next monthly quest reset time
+    WS_DAILY_QUEST_RESET_TIME   = 20008,                     // Next daily quest reset time
+    WS_DAILY_CALENDAR_DELETION_OLD_EVENTS_TIME = 20009,      // Next daily calendar deletions of old events time
+};
+
+namespace Trinity
+{
+namespace Impl
+{
+    struct TC_SHARED_API CurrentServerProcessHolder
+    {
+        static ServerProcessTypes type() { return _type; }
+        static ServerProcessTypes _type;
+    };
+}
+}
+#define THIS_SERVER_PROCESS (Trinity::Impl::CurrentServerProcessHolder::type())
 
 #define MAX_CREATURE_SPELL_DATA_SLOT 4
 

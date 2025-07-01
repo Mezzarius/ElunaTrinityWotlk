@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,15 +20,19 @@
 
 #include "ZoneScript.h"
 #include "Common.h"
+#include "Duration.h"
 #include <map>
-#include <memory>
 #include <set>
 
-#define OUT_SAVE_INST_DATA             TC_LOG_DEBUG("scripts", "Saving Instance Data for Instance %s (Map %d, Instance Id %d)", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
-#define OUT_SAVE_INST_DATA_COMPLETE    TC_LOG_DEBUG("scripts", "Saving Instance Data for Instance %s (Map %d, Instance Id %d) completed.", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
-#define OUT_LOAD_INST_DATA(a)          TC_LOG_DEBUG("scripts", "Loading Instance Data for Instance %s (Map %d, Instance Id %d). Input is '%s'", instance->GetMapName(), instance->GetId(), instance->GetInstanceId(), a)
-#define OUT_LOAD_INST_DATA_COMPLETE    TC_LOG_DEBUG("scripts", "Instance Data Load for Instance %s (Map %d, Instance Id: %d) is complete.", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
-#define OUT_LOAD_INST_DATA_FAIL        TC_LOG_ERROR("scripts", "Unable to load Instance Data for Instance %s (Map %d, Instance Id: %d).", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
+#ifdef TRINITY_API_USE_DYNAMIC_LINKING
+#include <memory>
+#endif
+
+#define OUT_SAVE_INST_DATA             TC_LOG_DEBUG("scripts", "Saving Instance Data for Instance {} (Map {}, Instance Id {})", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
+#define OUT_SAVE_INST_DATA_COMPLETE    TC_LOG_DEBUG("scripts", "Saving Instance Data for Instance {} (Map {}, Instance Id {}) completed.", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
+#define OUT_LOAD_INST_DATA(a)          TC_LOG_DEBUG("scripts", "Loading Instance Data for Instance {} (Map {}, Instance Id {}). Input is '{}'", instance->GetMapName(), instance->GetId(), instance->GetInstanceId(), a)
+#define OUT_LOAD_INST_DATA_COMPLETE    TC_LOG_DEBUG("scripts", "Instance Data Load for Instance {} (Map {}, Instance Id: {}) is complete.", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
+#define OUT_LOAD_INST_DATA_FAIL        TC_LOG_ERROR("scripts", "Unable to load Instance Data for Instance {} (Map {}, Instance Id: {}).", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
 
 namespace WorldPackets
 {
@@ -42,8 +45,8 @@ namespace WorldPackets
 class AreaBoundary;
 class Creature;
 class GameObject;
+class InstanceMap;
 struct InstanceSpawnGroupInfo;
-class Map;
 class ModuleReference;
 class Player;
 class Unit;
@@ -54,16 +57,17 @@ enum EncounterCreditType : uint8;
 
 enum EncounterFrameType
 {
-    ENCOUNTER_FRAME_ENGAGE              = 0,
-    ENCOUNTER_FRAME_DISENGAGE           = 1,
-    ENCOUNTER_FRAME_UPDATE_PRIORITY     = 2,
-    ENCOUNTER_FRAME_ADD_TIMER           = 3,
-    ENCOUNTER_FRAME_ENABLE_OBJECTIVE    = 4,
-    ENCOUNTER_FRAME_UPDATE_OBJECTIVE    = 5,
-    ENCOUNTER_FRAME_DISABLE_OBJECTIVE   = 6,
-    ENCOUNTER_FRAME_UNK7                = 7 // Seems to have something to do with sorting the encounter units
+    ENCOUNTER_FRAME_ENGAGE                  = 0,
+    ENCOUNTER_FRAME_DISENGAGE               = 1,
+    ENCOUNTER_FRAME_UPDATE_PRIORITY         = 2,
+    ENCOUNTER_FRAME_ADD_TIMER               = 3,
+    ENCOUNTER_FRAME_ENABLE_OBJECTIVE        = 4,
+    ENCOUNTER_FRAME_UPDATE_OBJECTIVE        = 5,
+    ENCOUNTER_FRAME_DISABLE_OBJECTIVE       = 6,
+    ENCOUNTER_FRAME_PHASE_SHIFT_CHANGED     = 7
 };
 
+// EnumUtils: DESCRIBE THIS
 enum EncounterState
 {
     NOT_STARTED   = 0,
@@ -154,16 +158,11 @@ typedef std::map<uint32 /*entry*/, uint32 /*type*/> ObjectInfoMap;
 class TC_GAME_API InstanceScript : public ZoneScript
 {
     public:
-        explicit InstanceScript(Map* map);
+        explicit InstanceScript(InstanceMap* map);
 
         virtual ~InstanceScript() { }
 
-        Map* instance;
-
-        // On creation, NOT load.
-        // PLEASE INITIALIZE FIELDS IN THE CONSTRUCTOR INSTEAD !!!
-        // KEEPING THIS METHOD ONLY FOR BACKWARD COMPATIBILITY !!!
-        virtual void Initialize() { }
+        InstanceMap* instance;
 
         // On instance load, exactly ONE of these methods will ALWAYS be called:
         // if we're starting without any saved instance data
@@ -198,6 +197,8 @@ class TC_GAME_API InstanceScript : public ZoneScript
 
         // Called when a player successfully enters the instance.
         virtual void OnPlayerEnter(Player* /*player*/) { }
+        // Called when a player successfully leaves the instance.
+        virtual void OnPlayerLeave(Player* /*player*/) { }
 
         // Handle open / close objects
         // * use HandleGameObject(0, boolen, GO); in OnObjectCreate in instance scripts
@@ -209,7 +210,7 @@ class TC_GAME_API InstanceScript : public ZoneScript
         void DoCloseDoorOrButton(ObjectGuid guid);
 
         // Respawns a GO having negative spawntimesecs in gameobject-table
-        void DoRespawnGameObject(ObjectGuid guid, uint32 timeToDespawn = MINUTE);
+        void DoRespawnGameObject(ObjectGuid guid, Seconds timeToDespawn = 1min);
 
         // Sends world state update to all players in instance
         void DoUpdateWorldState(uint32 worldstateId, uint32 worldstateValue);
@@ -225,10 +226,12 @@ class TC_GAME_API InstanceScript : public ZoneScript
         void DoStopTimedAchievement(AchievementCriteriaTimedTypes type, uint32 entry);
 
         // Remove Auras due to Spell on all players in instance
-        void DoRemoveAurasDueToSpellOnPlayers(uint32 spell);
+        void DoRemoveAurasDueToSpellOnPlayers(uint32 spell, bool includePets = false, bool includeControlled = false);
+        void DoRemoveAurasDueToSpellOnPlayer(Player* player, uint32 spell, bool includePets = false, bool includeControlled = false);
 
         // Cast spell on all players in instance
-        void DoCastSpellOnPlayers(uint32 spell);
+        void DoCastSpellOnPlayers(uint32 spell, bool includePets = false, bool includeControlled = false);
+        void DoCastSpellOnPlayer(Player* player, uint32 spell, bool includePets = false, bool includeControlled = false);
 
         // Return wether server allow two side groups or not
         static bool ServerAllowsTwoSideGroups();
@@ -255,7 +258,7 @@ class TC_GAME_API InstanceScript : public ZoneScript
         // Returns completed encounters mask for packets
         uint32 GetCompletedEncounterMask() const { return completedEncounters; }
 
-        void SendEncounterUnit(uint32 type, Unit* unit = nullptr, uint8 param1 = 0, uint8 param2 = 0);
+        void SendEncounterUnit(EncounterFrameType type, Unit const* unit = nullptr, uint8 param1 = 0, uint8 param2 = 0);
 
         virtual void FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& /*packet*/) { }
 

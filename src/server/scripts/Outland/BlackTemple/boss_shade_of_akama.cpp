@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,7 +29,7 @@
 #include "SpellScript.h"
 #include "TemporarySummon.h"
 
-enum Says
+enum AkamaTexts
 {
     // Akama
     SAY_BROKEN_FREE_0  = 0,
@@ -42,7 +42,7 @@ enum Says
     SAY_BROKEN_HAIL    = 1
 };
 
-enum Spells
+enum AkamaSpells
 {
     // Akama
     SPELL_STEALTH                    = 34189,
@@ -79,14 +79,14 @@ enum Spells
     SPELL_SPIRITBINDER_SPIRIT_HEAL   = 42317
 };
 
-enum Creatures
+enum AkamaCreatures
 {
     NPC_ASHTONGUE_CHANNELER    = 23421,
     NPC_ASHTONGUE_BROKEN       = 23319,
     NPC_CREATURE_SPAWNER_AKAMA = 23210
 };
 
-enum Actions
+enum AkamaActions
 {
     ACTION_START_SPAWNING      = 0,
     ACTION_STOP_SPAWNING       = 1,
@@ -97,7 +97,7 @@ enum Actions
     ACTION_BROKEN_HAIL         = 6
 };
 
-enum Events
+enum AkamaEvents
 {
     // Akama
     EVENT_SHADE_START                    =  1,
@@ -137,7 +137,7 @@ enum Events
     EVENT_CHAIN_HEAL_RESET               = 29
 };
 
-enum Misc
+enum AkamaMisc
 {
     AKAMA_CHANNEL_WAYPOINT = 0,
     AKAMA_INTRO_WAYPOINT   = 1,
@@ -198,7 +198,7 @@ static float const MIDDLE_OF_ROOM    = 400.0f;
 static float const FACE_THE_DOOR     = 0.08726646f;
 static float const FACE_THE_PLATFORM = 3.118662f;
 
-
+// 22841 - Shade of Akama
 struct boss_shade_of_akama : public BossAI
 {
     boss_shade_of_akama(Creature* creature) : BossAI(creature, DATA_SHADE_OF_AKAMA)
@@ -217,8 +217,8 @@ struct boss_shade_of_akama : public BossAI
         _Reset();
         Initialize();
         me->SetImmuneToPC(true);
-        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-        me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_STUN);
+        me->SetUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
+        me->SetEmoteState(EMOTE_STATE_STUN);
         me->SetWalk(true);
         events.ScheduleEvent(EVENT_INITIALIZE_SPAWNERS, 1s);
         me->SummonCreatureGroup(SUMMON_GROUP_RESET);
@@ -229,25 +229,25 @@ struct boss_shade_of_akama : public BossAI
         events.Reset();
         summons.DespawnAll();
 
-        for (ObjectGuid const spawnerGuid : _spawners)
+        for (ObjectGuid spawnerGuid : _spawners)
             if (Creature* spawner = ObjectAccessor::GetCreature(*me, spawnerGuid))
                 spawner->AI()->DoAction(ACTION_DESPAWN_ALL_SPAWNS);
 
         _DespawnAtEvade();
     }
 
-    void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+    void SpellHit(WorldObject* /*caster*/, SpellInfo const* spellInfo) override
     {
-        if (spell->Id == SPELL_AKAMA_SOUL_CHANNEL)
+        if (spellInfo->Id == SPELL_AKAMA_SOUL_CHANNEL)
         {
             events.ScheduleEvent(EVENT_START_CHANNELERS_AND_SPAWNERS, 1s);
-            me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_NONE);
+            me->SetEmoteState(EMOTE_STATE_NONE);
             events.ScheduleEvent(EVENT_EVADE_CHECK, 10s);
             if (Creature* akama = instance->GetCreature(DATA_AKAMA_SHADE))
                 AttackStart(akama);
         }
 
-        if (spell->Id == SPELL_AKAMA_SOUL_RETRIEVE)
+        if (spellInfo->Id == SPELL_AKAMA_SOUL_RETRIEVE)
             DoCastSelf(SPELL_AKAMA_SOUL_EXPEL_CHANNEL);
     }
 
@@ -256,12 +256,12 @@ struct boss_shade_of_akama : public BossAI
         if (_isInPhaseOne && motionType == CHASE_MOTION_TYPE)
         {
             _isInPhaseOne = false;
-            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+            me->RemoveUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
             me->SetImmuneToPC(false);
             me->SetWalk(false);
-            events.ScheduleEvent(EVENT_ADD_THREAT, Milliseconds(100));
+            events.ScheduleEvent(EVENT_ADD_THREAT, 100ms);
 
-            for (ObjectGuid const spawnerGuid : _spawners)
+            for (ObjectGuid spawnerGuid : _spawners)
                 if (Creature* spawner = ObjectAccessor::GetCreature(*me, spawnerGuid))
                     spawner->AI()->DoAction(ACTION_STOP_SPAWNING);
         }
@@ -274,7 +274,7 @@ struct boss_shade_of_akama : public BossAI
         if (Creature* akama = instance->GetCreature(DATA_AKAMA_SHADE))
             akama->AI()->DoAction(ACTION_SHADE_OF_AKAMA_DEAD);
 
-        for (ObjectGuid const spawnerGuid : _spawners)
+        for (ObjectGuid spawnerGuid : _spawners)
             if (Creature* spawner = ObjectAccessor::GetCreature(*me, spawnerGuid))
                 spawner->AI()->DoAction(ACTION_DESPAWN_ALL_SPAWNS);
 
@@ -316,11 +316,11 @@ struct boss_shade_of_akama : public BossAI
                 }
                 case EVENT_START_CHANNELERS_AND_SPAWNERS:
                 {
-                    for (ObjectGuid const summonGuid : summons)
+                    for (ObjectGuid summonGuid : summons)
                         if (Creature* channeler = ObjectAccessor::GetCreature(*me, summonGuid))
-                            channeler->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                            channeler->RemoveUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
 
-                    for (ObjectGuid const spawnerGuid : _spawners)
+                    for (ObjectGuid spawnerGuid : _spawners)
                         if (Creature* spawner = ObjectAccessor::GetCreature(*me, spawnerGuid))
                             spawner->AI()->DoAction(ACTION_START_SPAWNING);
 
@@ -328,11 +328,11 @@ struct boss_shade_of_akama : public BossAI
                 }
                 case EVENT_ADD_THREAT:
                     DoCast(SPELL_THREAT);
-                    events.Repeat(Seconds(3) + Milliseconds(500));
+                    events.Repeat(3s + 500ms);
                     break;
                 case EVENT_EVADE_CHECK:
                     EnterEvadeModeIfNeeded();
-                    events.Repeat(Seconds(10));
+                    events.Repeat(10s);
                     break;
                 default:
                     break;
@@ -347,6 +347,7 @@ private:
     bool _isInPhaseOne;
 };
 
+// 23191 - Akama
 struct npc_akama_shade : public ScriptedAI
 {
     npc_akama_shade(Creature* creature) : ScriptedAI(creature), _summons(me)
@@ -371,7 +372,7 @@ struct npc_akama_shade : public ScriptedAI
         DoCastSelf(SPELL_STEALTH);
 
         if (_instance->GetBossState(DATA_SHADE_OF_AKAMA) != DONE)
-            me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+            me->SetNpcFlag(UNIT_NPC_FLAG_GOSSIP);
     }
 
     void JustSummoned(Creature* summon) override
@@ -381,9 +382,9 @@ struct npc_akama_shade : public ScriptedAI
 
     void EnterEvadeMode(EvadeReason /*why*/) override { }
 
-    void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+    void SpellHit(WorldObject* /*caster*/, SpellInfo const* spellInfo) override
     {
-        if (spell->Id == SPELL_THREAT && !_isInCombat)
+        if (spellInfo->Id == SPELL_THREAT && !_isInCombat)
         {
             _isInCombat = true;
             me->SetWalk(false);
@@ -398,7 +399,7 @@ struct npc_akama_shade : public ScriptedAI
         }
     }
 
-    void DamageTaken(Unit* /*who*/, uint32& /*damage*/) override
+    void DamageTaken(Unit* /*who*/, uint32& /*damage*/, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         if (me->HealthBelowPct(20) && !_hasYelledOnce)
         {
@@ -459,7 +460,7 @@ struct npc_akama_shade : public ScriptedAI
             {
                 case EVENT_SHADE_START:
                     _instance->SetBossState(DATA_SHADE_OF_AKAMA, IN_PROGRESS);
-                    me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                    me->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
                     me->RemoveAurasDueToSpell(SPELL_STEALTH);
                     me->SetWalk(true);
                     me->GetMotionMaster()->MovePoint(AKAMA_CHANNEL_WAYPOINT, AkamaWP[0], false);
@@ -475,11 +476,11 @@ struct npc_akama_shade : public ScriptedAI
                     break;
                 case EVENT_CHAIN_LIGHTNING:
                     DoCastVictim(SPELL_CHAIN_LIGHTNING);
-                    _events.Repeat(Seconds(8), Seconds(15));
+                    _events.Repeat(8s, 15s);
                     break;
                 case EVENT_DESTRUCTIVE_POISON:
                     DoCastSelf(SPELL_DESTRUCTIVE_POISON);
-                    _events.Repeat(Seconds(3), Seconds(7));
+                    _events.Repeat(3s, 7s);
                     break;
                 case EVENT_START_SOUL_RETRIEVE:
                     me->SetFacingTo(FACE_THE_DOOR);
@@ -490,22 +491,22 @@ struct npc_akama_shade : public ScriptedAI
                     me->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
                     Talk(SAY_BROKEN_FREE_0);
                     SummonBrokens();
-                    _events.ScheduleEvent(EVENT_BROKEN_FREE_1, Seconds(10));
+                    _events.ScheduleEvent(EVENT_BROKEN_FREE_1, 10s);
                     break;
                 case EVENT_BROKEN_FREE_1:
                     Talk(SAY_BROKEN_FREE_1);
-                    _events.ScheduleEvent(EVENT_BROKEN_FREE_2, Seconds(12));
+                    _events.ScheduleEvent(EVENT_BROKEN_FREE_2, 12s);
                     break;
                 case EVENT_BROKEN_FREE_2:
                     Talk(SAY_BROKEN_FREE_2);
-                    _events.ScheduleEvent(EVENT_BROKEN_FREE_3, Seconds(15));
+                    _events.ScheduleEvent(EVENT_BROKEN_FREE_3, 15s);
                     break;
                 case EVENT_BROKEN_FREE_3:
                     if (Creature* special = ObjectAccessor::GetCreature(*me, _chosen))
                         special->AI()->Talk(SAY_BROKEN_SPECIAL);
 
                     _summons.DoAction(ACTION_BROKEN_EMOTE, _pred);
-                    _events.ScheduleEvent(EVENT_BROKEN_FREE_4, Seconds(5));
+                    _events.ScheduleEvent(EVENT_BROKEN_FREE_4, 5s);
                     break;
                 case EVENT_BROKEN_FREE_4:
                     _summons.DoAction(ACTION_BROKEN_HAIL, _pred);
@@ -533,7 +534,7 @@ struct npc_akama_shade : public ScriptedAI
                 shade->AI()->EnterEvadeMode(EVADE_REASON_OTHER);
     }
 
-    bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+    bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
     {
         if (gossipListId == 0)
         {
@@ -553,6 +554,7 @@ private:
     bool _hasYelledOnce;
 };
 
+// 23421 - Ashtongue Channeler
 struct npc_ashtongue_channeler : public PassiveAI
 {
     npc_ashtongue_channeler(Creature* creature) : PassiveAI(creature)
@@ -562,20 +564,20 @@ struct npc_ashtongue_channeler : public PassiveAI
 
     void Reset() override
     {
-        _scheduler.Schedule(Seconds(2), [this](TaskContext channel)
+        _scheduler.Schedule(2s, [this](TaskContext channel)
         {
             if (Creature* shade = _instance->GetCreature(DATA_SHADE_OF_AKAMA))
             {
-                if (shade->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE))
+                if (shade->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE))
                     DoCastSelf(SPELL_SHADE_SOUL_CHANNEL);
 
                 else
-                    me->DespawnOrUnsummon(Seconds(3));
+                    me->DespawnOrUnsummon(3s);
             }
 
-            channel.Repeat(Seconds(2));
+            channel.Repeat(2s);
         });
-        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+        me->SetUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
     }
 
     void UpdateAI(uint32 diff) override
@@ -588,6 +590,7 @@ private:
     TaskScheduler _scheduler;
 };
 
+// 23210 - Creature Generator (Akama)
 struct npc_creature_generator_akama : public ScriptedAI
 {
     npc_creature_generator_akama(Creature* creature) : ScriptedAI(creature), _summons(me)
@@ -622,7 +625,7 @@ struct npc_creature_generator_akama : public ScriptedAI
             case ACTION_START_SPAWNING:
                 if (_leftSide)
                 {
-                    _events.ScheduleEvent(EVENT_SPAWN_WAVE_B, Milliseconds(100));
+                    _events.ScheduleEvent(EVENT_SPAWN_WAVE_B, 100ms);
                     _events.ScheduleEvent(EVENT_SUMMON_ASHTONGUE_SORCERER, 2s, 5s);
                 }
                 else
@@ -653,15 +656,15 @@ struct npc_creature_generator_akama : public ScriptedAI
             {
                 case EVENT_SPAWN_WAVE_B:
                     DoCastSelf(SPELL_ASHTONGUE_WAVE_B);
-                    _events.Repeat(Seconds(50), Seconds(60));
+                    _events.Repeat(50s, 60s);
                     break;
                 case EVENT_SUMMON_ASHTONGUE_SORCERER: // left
                     DoCastSelf(SPELL_SUMMON_ASHTONGUE_SORCERER);
-                    _events.Repeat(Seconds(30), Seconds(35));
+                    _events.Repeat(30s, 35s);
                     break;
                 case EVENT_SUMMON_ASHTONGUE_DEFENDER: // right
                     DoCastSelf(SPELL_SUMMON_ASHTONGUE_DEFENDER);
-                    _events.Repeat(Seconds(30), Seconds(40));
+                    _events.Repeat(30s, 40s);
                     break;
                 default:
                     break;
@@ -675,6 +678,7 @@ private:
     bool _leftSide;
 };
 
+// 23215 - Ashtongue Sorcerer
 struct npc_ashtongue_sorcerer : public ScriptedAI
 {
     npc_ashtongue_sorcerer(Creature* creature) : ScriptedAI(creature)
@@ -693,7 +697,7 @@ struct npc_ashtongue_sorcerer : public ScriptedAI
     {
         if (Creature* shade = _instance->GetCreature(DATA_SHADE_OF_AKAMA))
         {
-            if (shade->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE))
+            if (shade->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE))
                 me->GetMotionMaster()->MovePoint(0, shade->GetPosition());
 
             else if (Creature* akama = _instance->GetCreature(DATA_AKAMA_SHADE))
@@ -704,7 +708,7 @@ struct npc_ashtongue_sorcerer : public ScriptedAI
 
     void JustDied(Unit* /*killer*/) override
     {
-        me->DespawnOrUnsummon(Seconds(5));
+        me->DespawnOrUnsummon(5s);
     }
 
     void EnterEvadeMode(EvadeReason /*why*/) override { }
@@ -727,15 +731,15 @@ struct npc_ashtongue_sorcerer : public ScriptedAI
             me->GetMotionMaster()->Clear();
             me->GetMotionMaster()->MovePoint(1, me->GetPositionX() + frand(-8.0f, 8.0f), me->GetPositionY() + frand(-8.0f, 8.0f), me->GetPositionZ());
 
-            _scheduler.Schedule(Seconds(1) + Milliseconds(500), [this](TaskContext sorcer_channel)
+            _scheduler.Schedule(1s + 500ms, [this](TaskContext sorcer_channel)
             {
                 if (Creature* shade = _instance->GetCreature(DATA_SHADE_OF_AKAMA))
                 {
-                    if (shade->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE))
+                    if (shade->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE))
                     {
                         me->SetFacingToObject(shade);
                         DoCastSelf(SPELL_SHADE_SOUL_CHANNEL);
-                        sorcer_channel.Repeat(Seconds(2));
+                        sorcer_channel.Repeat(2s);
                     }
                     else
                     {
@@ -769,6 +773,7 @@ private:
     bool _inBanish;
 };
 
+// 23216 - Ashtongue Defender
 struct npc_ashtongue_defender : public ScriptedAI
 {
     npc_ashtongue_defender(Creature* creature) : ScriptedAI(creature)
@@ -784,7 +789,7 @@ struct npc_ashtongue_defender : public ScriptedAI
 
     void JustDied(Unit* /*killer*/) override
     {
-        me->DespawnOrUnsummon(Seconds(5));
+        me->DespawnOrUnsummon(5s);
     }
 
     void JustEngagedWith(Unit* /*who*/) override
@@ -794,7 +799,6 @@ struct npc_ashtongue_defender : public ScriptedAI
         _events.ScheduleEvent(EVENT_DEBILITATING_STRIKE, 10s, 16s);
         _events.ScheduleEvent(EVENT_WINDFURY, 8s, 12s);
     }
-
 
     void UpdateAI(uint32 diff) override
     {
@@ -809,19 +813,19 @@ struct npc_ashtongue_defender : public ScriptedAI
             {
                 case EVENT_DEBILITATING_STRIKE:
                     DoCastVictim(SPELL_DEBILITATING_STRIKE);
-                    _events.Repeat(Seconds(20), Seconds(25));
+                    _events.Repeat(20s, 25s);
                     break;
                 case EVENT_HEROIC_STRIKE:
                     DoCastSelf(SPELL_HEROIC_STRIKE);
-                    _events.Repeat(Seconds(5), Seconds(15));
+                    _events.Repeat(5s, 15s);
                     break;
                 case EVENT_SHIELD_BASH:
                     DoCastVictim(SPELL_SHIELD_BASH);
-                    _events.Repeat(Seconds(10), Seconds(20));
+                    _events.Repeat(10s, 20s);
                     break;
                 case EVENT_WINDFURY:
                     DoCastVictim(SPELL_WINDFURY);
-                    _events.Repeat(Seconds(6), Seconds(8));
+                    _events.Repeat(6s, 8s);
                     break;
                 default:
                     break;
@@ -836,6 +840,7 @@ private:
     EventMap _events;
 };
 
+// 23318 - Ashtongue Rogue
 struct npc_ashtongue_rogue : public ScriptedAI
 {
     npc_ashtongue_rogue(Creature* creature) : ScriptedAI(creature)
@@ -851,12 +856,12 @@ struct npc_ashtongue_rogue : public ScriptedAI
 
     void JustDied(Unit* /*killer*/) override
     {
-        me->DespawnOrUnsummon(Seconds(5));
+        me->DespawnOrUnsummon(5s);
     }
 
     void JustEngagedWith(Unit* /*who*/) override
     {
-        _events.ScheduleEvent(EVENT_DEBILITATING_POISON, Milliseconds(500), Seconds(2));
+        _events.ScheduleEvent(EVENT_DEBILITATING_POISON, 500ms, 2s);
         _events.ScheduleEvent(EVENT_EVISCERATE, 2s, 5s);
     }
 
@@ -875,11 +880,11 @@ struct npc_ashtongue_rogue : public ScriptedAI
             {
                 case EVENT_DEBILITATING_POISON:
                     DoCastVictim(SPELL_DEBILITATING_POISON);
-                    _events.Repeat(Seconds(15), Seconds(20));
+                    _events.Repeat(15s, 20s);
                     break;
                 case EVENT_EVISCERATE:
                     DoCastVictim(SPELL_EVISCERATE);
-                    _events.Repeat(Seconds(12), Seconds(20));
+                    _events.Repeat(12s, 20s);
                     break;
                 default:
                     break;
@@ -894,6 +899,7 @@ private:
     EventMap _events;
 };
 
+// 23523 - Ashtongue Elementalist
 struct npc_ashtongue_elementalist : public ScriptedAI
 {
     npc_ashtongue_elementalist(Creature* creature) : ScriptedAI(creature)
@@ -909,7 +915,7 @@ struct npc_ashtongue_elementalist : public ScriptedAI
 
     void JustDied(Unit* /*killer*/) override
     {
-        me->DespawnOrUnsummon(Seconds(5));
+        me->DespawnOrUnsummon(5s);
     }
 
     void JustEngagedWith(Unit* /*who*/) override
@@ -933,11 +939,11 @@ struct npc_ashtongue_elementalist : public ScriptedAI
             {
                 case EVENT_RAIN_OF_FIRE:
                     DoCastVictim(SPELL_RAIN_OF_FIRE);
-                    _events.Repeat(Seconds(15), Seconds(20));
+                    _events.Repeat(15s, 20s);
                     break;
                 case EVENT_LIGHTNING_BOLT:
                     DoCastVictim(SPELL_LIGHTNING_BOLT);
-                    _events.Repeat(Seconds(8), Seconds(15));
+                    _events.Repeat(8s, 15s);
                     break;
                 default:
                     break;
@@ -952,6 +958,7 @@ private:
     EventMap _events;
 };
 
+// 23524 - Ashtongue Spiritbinder
 struct npc_ashtongue_spiritbinder : public ScriptedAI
 {
     npc_ashtongue_spiritbinder(Creature* creature) : ScriptedAI(creature)
@@ -976,7 +983,7 @@ struct npc_ashtongue_spiritbinder : public ScriptedAI
 
     void JustDied(Unit* /*killer*/) override
     {
-        me->DespawnOrUnsummon(Seconds(5));
+        me->DespawnOrUnsummon(5s);
     }
 
     void JustEngagedWith(Unit* /*who*/) override
@@ -984,7 +991,7 @@ struct npc_ashtongue_spiritbinder : public ScriptedAI
         _events.ScheduleEvent(EVENT_SPIRIT_HEAL, 5s, 6s);
     }
 
-    void DamageTaken(Unit* /*who*/, uint32& /*damage*/) override
+    void DamageTaken(Unit* /*who*/, uint32& /*damage*/, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         if (!_spiritMend)
             if (HealthBelowPct(30))
@@ -1016,7 +1023,7 @@ struct npc_ashtongue_spiritbinder : public ScriptedAI
             {
                 case EVENT_SPIRIT_HEAL:
                     DoCastSelf(SPELL_SPIRITBINDER_SPIRIT_HEAL);
-                    _events.Repeat(Seconds(13), Seconds(16));
+                    _events.Repeat(13s, 16s);
                     break;
                 case EVENT_SPIRIT_MEND_RESET:
                     _spiritMend = false;
@@ -1042,6 +1049,7 @@ private:
     bool _chainHeal;
 };
 
+// 23319 - Ashtongue Broken
 struct npc_ashtongue_broken : public ScriptedAI
 {
     npc_ashtongue_broken(Creature* creature) : ScriptedAI(creature)
@@ -1070,7 +1078,7 @@ struct npc_ashtongue_broken : public ScriptedAI
                 Talk(SAY_BROKEN_HAIL);
                 break;
             case ACTION_BROKEN_EMOTE:
-                me->SetByteValue(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_STAND_STATE, UNIT_STAND_STATE_KNEEL);
+                me->SetStandState(UNIT_STAND_STATE_KNEEL);
                 break;
             default:
                 break;
@@ -1133,6 +1141,6 @@ void AddSC_boss_shade_of_akama()
     RegisterBlackTempleCreatureAI(npc_ashtongue_elementalist);
     RegisterBlackTempleCreatureAI(npc_ashtongue_spiritbinder);
     RegisterBlackTempleCreatureAI(npc_ashtongue_broken);
-    RegisterAuraScript(spell_shade_soul_channel_serverside);
-    RegisterAuraScript(spell_shade_soul_channel);
+    RegisterSpellScript(spell_shade_soul_channel_serverside);
+    RegisterSpellScript(spell_shade_soul_channel);
 }

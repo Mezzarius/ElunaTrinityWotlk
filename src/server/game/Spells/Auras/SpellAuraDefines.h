@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,7 +58,7 @@ enum AuraEffectHandleModes
     AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK = (AURA_EFFECT_HANDLE_REAPPLY | AURA_EFFECT_HANDLE_REAL)
 };
 
-enum AuraRemoveMode
+enum AuraRemoveMode : uint8
 {
     AURA_REMOVE_NONE = 0,
     AURA_REMOVE_BY_DEFAULT = 1,       // scripted remove, remove by stack with aura with different ids and sc aura remove
@@ -126,7 +125,7 @@ enum AuraType : uint32
     SPELL_AURA_TRACK_RESOURCES                              = 45,
     SPELL_AURA_46                                           = 46,   // Ignore all Gear test spells
     SPELL_AURA_MOD_PARRY_PERCENT                            = 47,
-    SPELL_AURA_48                                           = 48,   // One periodic spell
+    SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT           = 48,   // One periodic spell
     SPELL_AURA_MOD_DODGE_PERCENT                            = 49,
     SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT                  = 50,
     SPELL_AURA_MOD_BLOCK_PERCENT                            = 51,
@@ -354,11 +353,11 @@ enum AuraType : uint32
     SPELL_AURA_X_RAY                                        = 273,
     SPELL_AURA_ABILITY_CONSUME_NO_AMMO                      = 274,
     SPELL_AURA_MOD_IGNORE_SHAPESHIFT                        = 275,
-    SPELL_AURA_MOD_DAMAGE_DONE_FOR_MECHANIC                 = 276,  // NYI
+    SPELL_AURA_MOD_DAMAGE_DONE_FOR_MECHANIC                 = 276,
     SPELL_AURA_MOD_MAX_AFFECTED_TARGETS                     = 277,
     SPELL_AURA_MOD_DISARM_RANGED                            = 278,
     SPELL_AURA_INITIALIZE_IMAGES                            = 279,
-    SPELL_AURA_MOD_ARMOR_PENETRATION_PCT = 280,
+    SPELL_AURA_MOD_ARMOR_PENETRATION_PCT                    = 280,
     SPELL_AURA_MOD_HONOR_GAIN_PCT                           = 281,
     SPELL_AURA_MOD_BASE_HEALTH_PCT                          = 282,
     SPELL_AURA_MOD_HEALING_RECEIVED                         = 283,  // Possibly only for some spell family class spells

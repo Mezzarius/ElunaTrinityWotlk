@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -44,7 +43,9 @@ void WaypointMgr::Load()
         float x = fields[2].GetFloat();
         float y = fields[3].GetFloat();
         float z = fields[4].GetFloat();
-        float o = fields[5].GetFloat();
+        Optional<float> o;
+        if (!fields[5].IsNull())
+            o = fields[5].GetFloat();
 
         Trinity::NormalizeMapCoord(x);
         Trinity::NormalizeMapCoord(y);
@@ -59,7 +60,7 @@ void WaypointMgr::Load()
 
         if (waypoint.moveType >= WAYPOINT_MOVE_TYPE_MAX)
         {
-            TC_LOG_ERROR("sql.sql", "Waypoint %u in waypoint_data has invalid move_type, ignoring", waypoint.id);
+            TC_LOG_ERROR("sql.sql", "Waypoint {} in waypoint_data has invalid move_type, ignoring", waypoint.id);
             continue;
         }
 
@@ -74,7 +75,7 @@ void WaypointMgr::Load()
     }
     while (result->NextRow());
 
-    TC_LOG_INFO("server.loading", ">> Loaded %u waypoints in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    TC_LOG_INFO("server.loading", ">> Loaded {} waypoints in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 WaypointMgr* WaypointMgr::instance()
@@ -85,11 +86,7 @@ WaypointMgr* WaypointMgr::instance()
 
 void WaypointMgr::ReloadPath(uint32 id)
 {
-    auto itr = _waypointStore.find(id);
-    if (itr != _waypointStore.end())
-        _waypointStore.erase(itr);
-
-    PreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_WAYPOINT_DATA_BY_ID);
+    WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_WAYPOINT_DATA_BY_ID);
 
     stmt->setUInt32(0, id);
 
@@ -105,7 +102,9 @@ void WaypointMgr::ReloadPath(uint32 id)
         float x = fields[1].GetFloat();
         float y = fields[2].GetFloat();
         float z = fields[3].GetFloat();
-        float o = fields[4].GetFloat();
+        Optional<float> o;
+        if (!fields[4].IsNull())
+            o = fields[4].GetFloat();
 
         Trinity::NormalizeMapCoord(x);
         Trinity::NormalizeMapCoord(y);
@@ -120,7 +119,7 @@ void WaypointMgr::ReloadPath(uint32 id)
 
         if (waypoint.moveType >= WAYPOINT_MOVE_TYPE_MAX)
         {
-            TC_LOG_ERROR("sql.sql", "Waypoint %u in waypoint_data has invalid move_type, ignoring", waypoint.id);
+            TC_LOG_ERROR("sql.sql", "Waypoint {} in waypoint_data has invalid move_type, ignoring", waypoint.id);
             continue;
         }
 
@@ -132,7 +131,9 @@ void WaypointMgr::ReloadPath(uint32 id)
     }
     while (result->NextRow());
 
-    _waypointStore[id] = WaypointPath(id, std::move(values));
+    WaypointPath& path = _waypointStore[id];
+    path.id = id;
+    path.nodes = std::move(values);
 }
 
 WaypointPath const* WaypointMgr::GetPath(uint32 id) const

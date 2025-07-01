@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -28,27 +28,39 @@ namespace Trinity
      *
      * @brief Utility class to enable range for loop syntax for multimap.equal_range uses
      */
-    template<class iterator>
+    template<class iterator, class end_iterator = iterator>
     class IteratorPair
     {
     public:
         constexpr IteratorPair() : _iterators() { }
-        constexpr IteratorPair(iterator first, iterator second) : _iterators(first, second) { }
-        constexpr IteratorPair(std::pair<iterator, iterator> iterators) : _iterators(iterators) { }
+        constexpr IteratorPair(iterator first, end_iterator second) : _iterators(first, second) { }
+        constexpr IteratorPair(std::pair<iterator, end_iterator> iterators) : _iterators(iterators) { }
 
         constexpr iterator begin() const { return _iterators.first; }
-        constexpr iterator end() const { return _iterators.second; }
+        constexpr end_iterator end() const { return _iterators.second; }
 
     private:
-        std::pair<iterator, iterator> _iterators;
+        std::pair<iterator, end_iterator> _iterators;
     };
 
     namespace Containers
     {
-        template<class M>
-        inline auto MapEqualRange(M& map, typename M::key_type const& key) -> IteratorPair<decltype(map.begin())>
+        template<typename iterator, class end_iterator = iterator>
+        constexpr IteratorPair<iterator, end_iterator> MakeIteratorPair(iterator first, end_iterator second)
         {
-            return { map.equal_range(key) };
+            return { first, second };
+        }
+
+        template<typename iterator, class end_iterator = iterator>
+        constexpr IteratorPair<iterator, end_iterator> MakeIteratorPair(std::pair<iterator, end_iterator> iterators)
+        {
+            return iterators;
+        }
+
+        template<class M>
+        auto MapEqualRange(M& map, typename M::key_type const& key)
+        {
+            return MakeIteratorPair(map.equal_range(key));
         }
     }
     //! namespace Containers

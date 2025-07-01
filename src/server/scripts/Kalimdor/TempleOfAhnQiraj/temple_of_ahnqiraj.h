@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -32,11 +31,11 @@ enum AQTDataTypes
     DATA_SARTURA            = 1,
     DATA_FRANKRIS           = 2,
     DATA_HUHURAN            = 3,
-    DATA_TWIN_EMPERORS      = 4,
-    DATA_CTHUN              = 5,
+    DATA_TWIN_EMPERORS      = 4,      // Used in conditions for gossip menu options & texts (menu 6644)
+    DATA_CTHUN              = 5,      // Used in conditions for SAI (creatures 15378 - 15380)
     DATA_BUG_TRIO           = 6,
     DATA_VISCIDUS           = 7,
-    DATA_OURO               = 8,
+    DATA_OURO               = 8,      // Used in conditions for gossip menu options & texts (menu 6644)
 
     // Others
     DATA_KRI                = 9,

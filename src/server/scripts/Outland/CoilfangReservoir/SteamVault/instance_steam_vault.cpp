@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,19 +22,18 @@
 #include "GameObjectAI.h"
 #include "InstanceScript.h"
 #include "Log.h"
-#include "Map.h"
 #include "steam_vault.h"
 
 struct go_main_chambers_access_panel : public GameObjectAI
 {
     go_main_chambers_access_panel(GameObject* go) : GameObjectAI(go), _instance(go->GetInstanceScript()) { }
 
-    bool GossipHello(Player* /*player*/) override
+    bool OnGossipHello(Player* /*player*/) override
     {
         if (Creature* controller = _instance->GetCreature(DATA_DOOR_CONTROLLER))
             controller->AI()->Talk(CONTROLLER_TEXT_ACESS_USED);
         _instance->SetData(ACTION_OPEN_DOOR, 0);
-        me->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+        me->SetFlag(GO_FLAG_NOT_SELECTABLE);
         me->SetGoState(GO_STATE_ACTIVE);
         return true;
     }
@@ -67,12 +66,11 @@ class instance_steam_vault : public InstanceMapScript
 
         struct instance_steam_vault_InstanceMapScript : public InstanceScript
         {
-            instance_steam_vault_InstanceMapScript(Map* map) : InstanceScript(map)
+            instance_steam_vault_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
             {
                 SetHeaders(DataHeader);
                 SetBossNumber(EncounterCount);
                 LoadObjectData(creatureData, gameObjectData);
-                distillerState = 0;
             }
 
             void OnGameObjectCreate(GameObject* go) override
@@ -92,24 +90,15 @@ class instance_steam_vault : public InstanceMapScript
                     if (GameObject* mainDoor = GetGameObject(DATA_MAIN_DOOR))
                     {
                         HandleGameObject(ObjectGuid::Empty, true, mainDoor);
-                       mainDoor->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+                       mainDoor->SetFlag(GO_FLAG_NOT_SELECTABLE);
                     }
                 }
             }
 
-            void SetData(uint32 type, uint32 data) override
+            void SetData(uint32 type, uint32 /*data*/) override
             {
-                if (type == DATA_DISTILLER)
-                    distillerState = data;
-                else if (type == ACTION_OPEN_DOOR)
+                if (type == ACTION_OPEN_DOOR)
                     CheckMainDoor();
-            }
-
-            uint32 GetData(uint32 type) const override
-            {
-                if (type == DATA_DISTILLER)
-                    return distillerState;
-                return 0;
             }
 
             bool SetBossState(uint32 type, EncounterState state) override
@@ -122,12 +111,12 @@ class instance_steam_vault : public InstanceMapScript
                     case DATA_HYDROMANCER_THESPIA:
                         if (state == DONE)
                             if (GameObject* panel = GetGameObject(DATA_ACCESS_PANEL_HYDRO))
-                                panel->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+                                panel->RemoveFlag(GO_FLAG_NOT_SELECTABLE);
                         break;
                     case DATA_MEKGINEER_STEAMRIGGER:
                         if (state == DONE)
                             if (GameObject* panel = GetGameObject(DATA_ACCESS_PANEL_MEK))
-                                panel->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+                                panel->RemoveFlag(GO_FLAG_NOT_SELECTABLE);
                         break;
                     default:
                         break;
@@ -135,9 +124,6 @@ class instance_steam_vault : public InstanceMapScript
 
                 return true;
             }
-
-        protected:
-            uint8 distillerState;
         };
 
         InstanceScript* GetInstanceScript(InstanceMap* map) const override

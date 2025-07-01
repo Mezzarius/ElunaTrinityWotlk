@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,7 +21,7 @@
 #include "Common.h"
 #include "Opcodes.h"
 #include "ByteBuffer.h"
-#include <chrono>
+#include "Duration.h"
 
 class WorldPacket : public ByteBuffer
 {
@@ -39,7 +38,7 @@ class WorldPacket : public ByteBuffer
         {
         }
 
-        WorldPacket(WorldPacket&& packet, std::chrono::steady_clock::time_point receivedTime) : ByteBuffer(std::move(packet)), m_opcode(packet.m_opcode), m_receivedTime(receivedTime)
+        WorldPacket(WorldPacket&& packet, TimePoint receivedTime) : ByteBuffer(std::move(packet)), m_opcode(packet.m_opcode), m_receivedTime(receivedTime)
         {
         }
 
@@ -81,11 +80,11 @@ class WorldPacket : public ByteBuffer
         uint16 GetOpcode() const { return m_opcode; }
         void SetOpcode(uint16 opcode) { m_opcode = opcode; }
 
-        std::chrono::steady_clock::time_point GetReceivedTime() const { return m_receivedTime; }
+        TimePoint GetReceivedTime() const { return m_receivedTime; }
 
     protected:
         uint16 m_opcode;
-        std::chrono::steady_clock::time_point m_receivedTime; // only set for a specific set of opcodes, for performance reasons.
+        TimePoint m_receivedTime; // only set for a specific set of opcodes, for performance reasons.
 };
 
 #endif

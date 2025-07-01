@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+# This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -23,27 +23,16 @@ list(APPEND PRIVATE_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/Debugging/Errors.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/Debugging/Errors.h)
 
-if (USE_COREPCH)
+if(USE_COREPCH)
   set(PRIVATE_PCH_HEADER PrecompiledHeaders/commonPCH.h)
-endif (USE_COREPCH)
+endif(USE_COREPCH)
 
 GroupSources(${CMAKE_CURRENT_SOURCE_DIR})
-
-add_definitions(-DTRINITY_API_EXPORT_COMMON)
 
 add_library(common
   ${PRIVATE_SOURCES}
 )
 
-# Do NOT add any extra include directory here, as we don't want the common
-# library to depend on anything else than TC deps, and itself.
-# This way we ensure that if either a PR does that without modifying this file,
-# a compile error will be generated, either this file will be modified so it
-# is detected more easily.
-# While it is OK to include files from other libs as long as they don't require
-# linkage (enums, defines...) it is discouraged to do so unless necessary, as it will pullute
-# include_directories leading to further unnoticed dependency aditions
-# Linker Depencency requirements: none
 CollectIncludeDirectories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC_INCLUDES
@@ -58,11 +47,15 @@ target_include_directories(common
   PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR})
 
+set_target_properties(common
+  PROPERTIES
+    DEFINE_SYMBOL TRINITY_API_EXPORT_COMMON)
+
 target_link_libraries(common
   PRIVATE
-    process
     trinity-core-interface
   PUBLIC
+    argon2
     boost
     fmt
     g3dlib
@@ -72,7 +65,8 @@ target_link_libraries(common
     openssl
     valgrind
     threads
-    jemalloc)
+    jemalloc
+    short_alloc)
 
 
 if (ELUNA)
@@ -88,12 +82,12 @@ set_target_properties(common
       FOLDER
         "server")
 
-if( BUILD_SHARED_LIBS )
-  if( UNIX )
+if(BUILD_SHARED_LIBS)
+  if(UNIX)
     install(TARGETS common
       LIBRARY
         DESTINATION lib)
-  elseif( WIN32 )
+  elseif(WIN32)
     install(TARGETS common
       RUNTIME
         DESTINATION "${CMAKE_INSTALL_PREFIX}")
@@ -101,6 +95,6 @@ if( BUILD_SHARED_LIBS )
 endif()
 
 # Generate precompiled header
-if (USE_COREPCH)
+if(USE_COREPCH)
   add_cxx_pch(common ${PRIVATE_PCH_HEADER})
-endif ()
+endif()

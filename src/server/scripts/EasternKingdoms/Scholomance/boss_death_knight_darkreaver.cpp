@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,49 +15,35 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* ScriptData
-SDName: Boss_Death_knight_darkreaver
-SD%Complete: 100
-SDComment:
-SDCategory: Scholomance
-EndScriptData */
-
 #include "ScriptMgr.h"
 #include "scholomance.h"
 #include "ScriptedCreature.h"
 
-class boss_death_knight_darkreaver : public CreatureScript
+enum DarkreaverSpells
 {
-public:
-    boss_death_knight_darkreaver() : CreatureScript("boss_death_knight_darkreaver") { }
+    SUMMON_FALLEN_CHARGER       = 23261
+};
 
-    CreatureAI* GetAI(Creature* creature) const override
+// 14516 - Death Knight Darkreaver
+struct boss_death_knight_darkreaver : public ScriptedAI
+{
+    boss_death_knight_darkreaver(Creature* creature) : ScriptedAI(creature) { }
+
+    void Reset() override
     {
-        return GetScholomanceAI<boss_death_knight_darkreaverAI>(creature);
     }
 
-    struct boss_death_knight_darkreaverAI : public ScriptedAI
+    void JustDied(Unit* /*killer*/) override
     {
-        boss_death_knight_darkreaverAI(Creature* creature) : ScriptedAI(creature) { }
+        DoCastSelf(SUMMON_FALLEN_CHARGER, true);
+    }
 
-        void Reset() override
-        {
-        }
-
-        void DamageTaken(Unit* /*done_by*/, uint32 &damage) override
-        {
-            if (me->GetHealth() <= damage)
-                DoCast(me, 23261, true);   //Summon Darkreaver's Fallen Charger
-        }
-
-        void JustEngagedWith(Unit* /*who*/) override
-        {
-        }
-    };
-
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+    }
 };
 
 void AddSC_boss_death_knight_darkreaver()
 {
-    new boss_death_knight_darkreaver();
+    RegisterScholomanceCreatureAI(boss_death_knight_darkreaver);
 }

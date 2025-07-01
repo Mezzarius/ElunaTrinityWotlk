@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -72,6 +72,34 @@ WorldPacket const* WorldPackets::Query::QueryGameObjectResponse::Write()
         _worldPacket << float(Stats.Size);                          // go size
         _worldPacket.append(Stats.QuestItems, MAX_GAMEOBJECT_QUEST_ITEMS);
     }
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Query::CorpseLocation::Write()
+{
+    _worldPacket << uint8(Valid);
+
+    if (Valid)
+    {
+        _worldPacket << int32(MapID);
+        _worldPacket << Position;
+        _worldPacket << int32(ActualMapID);
+        _worldPacket << uint32(Transport);
+    }
+
+    return &_worldPacket;
+}
+
+void WorldPackets::Query::QueryCorpseTransport::Read()
+{
+    _worldPacket >> Transport;
+}
+
+WorldPacket const* WorldPackets::Query::CorpseTransportQuery::Write()
+{
+    _worldPacket << Position;
+    _worldPacket << float(Facing);
 
     return &_worldPacket;
 }

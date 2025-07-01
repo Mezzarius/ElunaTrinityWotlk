@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -83,7 +82,7 @@ uint32 GetLiquidFlags(uint32 liquidId);
 
 namespace MMAP
 {
-    char const* MAP_VERSION_MAGIC = "v1.9";
+    uint32 const MAP_VERSION_MAGIC = 10;
 
     TerrainBuilder::TerrainBuilder(bool skipLiquid) : m_skipLiquid (skipLiquid){ }
     TerrainBuilder::~TerrainBuilder() { }
@@ -145,7 +144,7 @@ namespace MMAP
 
         map_fileheader fheader;
         if (fread(&fheader, sizeof(map_fileheader), 1, mapFile) != 1 ||
-            fheader.versionMagic != *((uint32 const*)(MAP_VERSION_MAGIC)))
+            fheader.versionMagic != MAP_VERSION_MAGIC)
         {
             fclose(mapFile);
             printf("%s is the wrong version, please extract new .map files\n", mapFileName);
@@ -405,7 +404,6 @@ namespace MMAP
                 useTerrain = true;
                 useLiquid = true;
                 uint8 liquidType = MAP_LIQUID_TYPE_NO_WATER;
-                // FIXME: "warning: the address of ‘liquid_type’ will always evaluate as ‘true’"
 
                 // if there is no liquid, don't use liquid
                 if (!meshData.liquidVerts.size() || !ltriangles.size())
@@ -426,7 +424,6 @@ namespace MMAP
                     else
                         useLiquid = false;
                 }
-
 
                 // if there is no terrain, don't use terrain
                 if (!ttriangles.size())

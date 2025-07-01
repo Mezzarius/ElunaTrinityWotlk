@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,27 +19,17 @@
 #define TRINITY_CONTAINERS_H
 
 #include "Define.h"
+#include "MapUtils.h"
 #include "Random.h"
 #include <algorithm>
-#include <exception>
 #include <iterator>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace Trinity
 {
-    template<class T>
-    constexpr inline T* AddressOrSelf(T* ptr)
-    {
-        return ptr;
-    }
-
-    template<class T>
-    constexpr inline T* AddressOrSelf(T& not_ptr)
-    {
-        return std::addressof(not_ptr);
-    }
-
     template <class T>
     class CheckedBufferOutputIterator
     {
@@ -70,29 +60,16 @@ namespace Trinity
 
     namespace Containers
     {
-        // replace with std::size in C++17
-        template<class C>
-        constexpr inline std::size_t Size(C const& container)
-        {
-            return container.size();
-        }
-
-        template<class T, std::size_t size>
-        constexpr inline std::size_t Size(T const(&)[size]) noexcept
-        {
-            return size;
-        }
-
         // resizes <container> to have at most <requestedSize> elements
         // if it has more than <requestedSize> elements, the elements to keep are selected randomly
         template<class C>
         void RandomResize(C& container, std::size_t requestedSize)
         {
             static_assert(std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<typename C::iterator>::iterator_category>::value, "Invalid container passed to Trinity::Containers::RandomResize");
-            if (Size(container) <= requestedSize)
+            if (std::size(container) <= requestedSize)
                 return;
             auto keepIt = std::begin(container), curIt = std::begin(container);
-            uint32 elementsToKeep = requestedSize, elementsToProcess = Size(container);
+            uint32 elementsToKeep = requestedSize, elementsToProcess = std::size(container);
             while (elementsToProcess)
             {
                 // this element has chance (elementsToKeep / elementsToProcess) of being kept
@@ -131,7 +108,7 @@ namespace Trinity
         inline auto SelectRandomContainerElement(C const& container) -> typename std::add_const<decltype(*std::begin(container))>::type&
         {
             auto it = std::begin(container);
-            std::advance(it, urand(0, uint32(Size(container)) - 1));
+            std::advance(it, urand(0, uint32(std::size(container)) - 1));
             return *it;
         }
 
@@ -164,7 +141,7 @@ namespace Trinity
         auto SelectRandomWeightedContainerElement(C const& container, Fn weightExtractor) -> decltype(std::begin(container))
         {
             std::vector<double> weights;
-            weights.reserve(Size(container));
+            weights.reserve(std::size(container));
             double weightSum = 0.0;
             for (auto& val : container)
             {
@@ -173,7 +150,7 @@ namespace Trinity
                 weightSum += weight;
             }
             if (weightSum <= 0.0)
-                weights.assign(Size(container), 1.0);
+                weights.assign(std::size(container), 1.0);
 
             return SelectRandomWeightedContainerElement(container, weights);
         }
@@ -188,7 +165,7 @@ namespace Trinity
         template<class C>
         inline void RandomShuffle(C& container)
         {
-            std::shuffle(std::begin(container), std::end(container), SFMTEngine::Instance());
+            std::shuffle(std::begin(container), std::end(container), RandomEngine::Instance());
         }
 
         /**
@@ -219,27 +196,44 @@ namespace Trinity
             return false;
         }
 
-        /**
-         * Returns a pointer to mapped value (or the value itself if map stores pointers)
-         */
-        template<class M>
-        inline auto MapGetValuePtr(M& map, typename M::key_type const& key) -> decltype(AddressOrSelf(map.find(key)->second))
+        namespace Impl
         {
-            auto itr = map.find(key);
-            return itr != map.end() ? AddressOrSelf(itr->second) : nullptr;
+            template <typename Container, typename Predicate>
+            void EraseIfMoveAssignable(Container& c, Predicate p)
+            {
+                auto wpos = c.begin();
+                for (auto rpos = c.begin(), end = c.end(); rpos != end; ++rpos)
+                {
+                    if (!p(*rpos))
+                    {
+                        if (rpos != wpos)
+                            std::swap(*rpos, *wpos);
+                        ++wpos;
+                    }
+                }
+                c.erase(wpos, c.end());
+            }
+
+            template <typename Container, typename Predicate>
+            void EraseIfNotMoveAssignable(Container& c, Predicate p)
+            {
+                for (auto it = c.begin(); it != c.end();)
+                {
+                    if (p(*it))
+                        it = c.erase(it);
+                    else
+                        ++it;
+                }
+            }
         }
 
-        template<class K, class V, template<class, class, class...> class M, class... Rest>
-        void MultimapErasePair(M<K, V, Rest...>& multimap, K const& key, V const& value)
+        template <typename Container, typename Predicate>
+        void EraseIf(Container& c, Predicate p)
         {
-            auto range = multimap.equal_range(key);
-            for (auto itr = range.first; itr != range.second;)
-            {
-                if (itr->second == value)
-                    itr = multimap.erase(itr);
-                else
-                    ++itr;
-            }
+            if constexpr (std::is_move_assignable_v<decltype(*c.begin())>)
+                Impl::EraseIfMoveAssignable(c, std::ref(p));
+            else
+                Impl::EraseIfNotMoveAssignable(c, std::ref(p));
         }
     }
     //! namespace Containers

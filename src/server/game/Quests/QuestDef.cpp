@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,6 +23,7 @@
 #include "Opcodes.h"
 #include "Player.h"
 #include "QuestPackets.h"
+#include "QuestPools.h"
 #include "World.h"
 
 Quest::Quest(Field* questRecord)
@@ -36,7 +36,7 @@ Quest::Quest(Field* questRecord)
     _type = questRecord[5].GetUInt16();
     _suggestedPlayers = questRecord[6].GetUInt8();
     _timeAllowed = questRecord[7].GetUInt32();
-    _allowableRaces = questRecord[8].GetUInt16();
+    _allowableRaces = questRecord[8].GetUInt32();
     _requiredFactionId1 = questRecord[9].GetUInt16();
     _requiredFactionId2 = questRecord[10].GetUInt16();
     _requiredFactionValue1 = questRecord[11].GetInt32();
@@ -126,7 +126,7 @@ void Quest::LoadQuestDetails(Field* fields)
     {
         if (!sEmotesStore.LookupEntry(fields[1+i].GetUInt16()))
         {
-            TC_LOG_ERROR("sql.sql", "Table `quest_details` has non-existing Emote%i (%u) set for quest %u. Skipped.", 1+i, fields[1+i].GetUInt16(), fields[0].GetUInt32());
+            TC_LOG_ERROR("sql.sql", "Table `quest_details` has non-existing Emote{} ({}) set for quest {}. Skipped.", 1+i, fields[1+i].GetUInt16(), fields[0].GetUInt32());
             continue;
         }
 
@@ -143,10 +143,10 @@ void Quest::LoadQuestRequestItems(Field* fields)
     _emoteOnIncomplete = fields[2].GetUInt16();
 
     if (!sEmotesStore.LookupEntry(_emoteOnComplete))
-        TC_LOG_ERROR("sql.sql", "Table `quest_request_items` has non-existing EmoteOnComplete (%u) set for quest %u.", _emoteOnComplete, fields[0].GetUInt32());
+        TC_LOG_ERROR("sql.sql", "Table `quest_request_items` has non-existing EmoteOnComplete ({}) set for quest {}.", _emoteOnComplete, fields[0].GetUInt32());
 
     if (!sEmotesStore.LookupEntry(_emoteOnIncomplete))
-        TC_LOG_ERROR("sql.sql", "Table `quest_request_items` has non-existing EmoteOnIncomplete (%u) set for quest %u.", _emoteOnIncomplete, fields[0].GetUInt32());
+        TC_LOG_ERROR("sql.sql", "Table `quest_request_items` has non-existing EmoteOnIncomplete ({}) set for quest {}.", _emoteOnIncomplete, fields[0].GetUInt32());
 
     _requestItemsText = fields[3].GetString();
 }
@@ -157,7 +157,7 @@ void Quest::LoadQuestOfferReward(Field* fields)
     {
         if (!sEmotesStore.LookupEntry(fields[1 + i].GetUInt16()))
         {
-            TC_LOG_ERROR("sql.sql", "Table `quest_offer_reward` has non-existing Emote%i (%u) set for quest %u. Skipped.", 1 + i, fields[1 + i].GetUInt16(), fields[0].GetUInt32());
+            TC_LOG_ERROR("sql.sql", "Table `quest_offer_reward` has non-existing Emote{} ({}) set for quest {}. Skipped.", 1 + i, fields[1 + i].GetUInt16(), fields[0].GetUInt32());
             continue;
         }
 
@@ -199,25 +199,25 @@ void Quest::LoadQuestMailSender(Field* fields)
     _rewardMailSenderEntry = fields[1].GetUInt32();
 }
 
-uint32 Quest::XPValue(Player* player) const
+uint32 Quest::GetXPReward(Player const* player) const
 {
     if (player)
     {
-        int32 quest_level = (_level == -1 ? player->getLevel() : _level);
+        int32 quest_level = (_level == -1 ? player->GetLevel() : _level);
         QuestXPEntry const* xpentry = sQuestXPStore.LookupEntry(quest_level);
         if (!xpentry)
             return 0;
 
-        int32 diffFactor = 2 * (quest_level - player->getLevel()) + 20;
+        int32 diffFactor = 2 * (quest_level - player->GetLevel()) + 20;
         if (diffFactor < 1)
             diffFactor = 1;
         else if (diffFactor > 10)
             diffFactor = 10;
 
-        uint32 xp = RoundXPValue(diffFactor * xpentry->Exp[_rewardXPDifficulty] / 10);
+        uint32 xp = RoundXPValue(diffFactor * xpentry->Difficulty[_rewardXPDifficulty] / 10);
         if (sWorld->getIntConfig(CONFIG_MIN_QUEST_SCALED_XP_RATIO))
         {
-            uint32 minScaledXP = RoundXPValue(xpentry->Exp[_rewardXPDifficulty]) * sWorld->getIntConfig(CONFIG_MIN_QUEST_SCALED_XP_RATIO) / 100;
+            uint32 minScaledXP = RoundXPValue(xpentry->Difficulty[_rewardXPDifficulty]) * sWorld->getIntConfig(CONFIG_MIN_QUEST_SCALED_XP_RATIO) / 100;
             xp = std::max(minScaledXP, xp);
         }
 
@@ -227,14 +227,74 @@ uint32 Quest::XPValue(Player* player) const
     return 0;
 }
 
-int32 Quest::GetRewOrReqMoney() const
+/*static*/ bool Quest::IsTakingQuestEnabled(uint32 questId)
+{
+    if (!sQuestPoolMgr->IsQuestActive(questId))
+        return false;
+
+    return true;
+}
+
+void Quest::BuildQuestRewards(WorldPackets::Quest::QuestRewards& rewards, Player* player, bool sendHiddenRewards) const
+{
+    if (!HasFlag(QUEST_FLAGS_HIDDEN_REWARDS) || sendHiddenRewards)
+    {
+        for (uint32 i = 0; i < QUEST_REWARD_CHOICES_COUNT; ++i)
+        {
+            if (!RewardChoiceItemId[i])
+                continue;
+
+            uint32 displayID = 0;
+            if (ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(RewardChoiceItemId[i]))
+                displayID = itemTemplate->DisplayInfoID;
+
+            rewards.UnfilteredChoiceItems.emplace_back(RewardChoiceItemId[i], RewardChoiceItemCount[i], displayID);
+        }
+
+        for (uint32 i = 0; i < QUEST_REWARDS_COUNT; ++i)
+        {
+            if (!RewardItemId[i])
+                continue;
+
+            uint32 displayID = 0;
+            if (ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(RewardItemId[i]))
+                displayID = itemTemplate->DisplayInfoID;
+
+            rewards.RewardItems.emplace_back(RewardItemId[i], RewardItemIdCount[i], displayID);
+        }
+
+        rewards.RewardMoney = GetRewOrReqMoney(player);
+        rewards.RewardXPDifficulty = GetXPReward(player) * sWorld->getRate(RATE_XP_QUEST);
+    }
+
+    rewards.RewardHonor = 10 * CalculateHonorGain(player->GetQuestLevel(this)); // rewarded honor points. Multiply with 10 to satisfy client
+    rewards.RewardDisplaySpell = GetRewSpell(); // reward spell, this spell will display (icon) (cast if RewSpellCast == 0)
+    rewards.RewardSpell = GetRewSpellCast();
+    rewards.RewardTitleId = GetCharTitleId();
+    rewards.RewardTalents = GetBonusTalents();
+    rewards.RewardArenaPoints = GetRewArenaPoints();
+
+    for (uint32 i = 0; i < QUEST_REPUTATIONS_COUNT; ++i)
+        rewards.RewardFactionID[i] = RewardFactionId[i];
+
+    for (uint32 i = 0; i < QUEST_REPUTATIONS_COUNT; ++i)
+        rewards.RewardFactionValue[i] = RewardFactionValueId[i];
+
+    for (uint32 i = 0; i < QUEST_REPUTATIONS_COUNT; ++i)
+        rewards.RewardFactionValueOverride[i] = RewardFactionValueIdOverride[i];
+}
+
+int32 Quest::GetRewOrReqMoney(Player const* player) const
 {
     // RequiredMoney: the amount is the negative copper sum.
-    if (_rewardMoney <= 0)
+    if (_rewardMoney < 0)
         return _rewardMoney;
 
     // RewardMoney: the positive amount
-    return int32(_rewardMoney * sWorld->getRate(RATE_MONEY_QUEST));
+    if (!player || !player->IsMaxLevel())
+        return int32(_rewardMoney * sWorld->getRate(RATE_MONEY_QUEST));
+    else // At level cap, the money reward is the maximum amount between normal and bonus money reward
+        return std::max(int32(GetRewMoneyMaxLevel()), int32(_rewardMoney * sWorld->getRate(RATE_MONEY_QUEST)));
 }
 
 uint32 Quest::GetRewMoneyMaxLevel() const
@@ -299,7 +359,7 @@ uint32 Quest::CalculateHonorGain(uint8 level) const
         if (!tc)
             return 0;
 
-        honor = uint32(tc->value * GetRewHonorMultiplier() * 0.1f);
+        honor = uint32(tc->Data * GetRewHonorMultiplier() * 0.1f);
         honor += GetRewHonorAddition();
     }
 
@@ -403,9 +463,6 @@ WorldPacket Quest::BuildQueryData(LocaleConstant loc) const
     response.Info.POIx = GetPOIx();
     response.Info.POIy = GetPOIy();
     response.Info.POIPriority = GetPointOpt();
-
-    if (sWorld->getBoolConfig(CONFIG_UI_QUESTLEVELS_IN_DIALOGS))
-        Quest::AddQuestLevelToTitle(locQuestTitle, GetQuestLevel());
 
     response.Info.Title = locQuestTitle;
     response.Info.Objectives = locQuestObjectives;

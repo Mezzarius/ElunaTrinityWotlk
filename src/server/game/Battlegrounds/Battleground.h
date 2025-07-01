@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,10 +23,16 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include "SharedDefines.h"
+#include "UniqueTrackablePtr.h"
+#include <deque>
 #include <map>
 
 namespace WorldPackets
 {
+    namespace Battleground
+    {
+        class PVPMatchStatistics;
+    }
     namespace WorldState
     {
         class InitWorldStates;
@@ -185,8 +190,8 @@ enum BattlegroundStatus
 
 struct BattlegroundPlayer
 {
-    time_t  OfflineRemoveTime;                              // for tracking and removing offline players from queue after 5 minutes
-    uint32  Team;                                           // Player's team
+    time_t OfflineRemoveTime;                              // for tracking and removing offline players from queue after 5 minutes
+    uint32 Team;                                           // Player's team
 };
 
 struct BattlegroundObjectInfo
@@ -320,6 +325,7 @@ class TC_GAME_API Battleground
 
         void AddToBGFreeSlotQueue();                        //this queue will be useful when more battlegrounds instances will be available
         void RemoveFromBGFreeSlotQueue();                   //this method could delete whole BG instance, if another free is available
+        void RemoveFromBGFreeSlotQueueOnShutdown() { m_InBGFreeSlotQueue = false; }
 
         void DecreaseInvitedCount(uint32 team)      { (team == ALLIANCE) ? --m_InvitedAlliance : --m_InvitedHorde; }
         void IncreaseInvitedCount(uint32 team)      { (team == ALLIANCE) ? ++m_InvitedAlliance : ++m_InvitedHorde; }
@@ -380,8 +386,8 @@ class TC_GAME_API Battleground
         template<class Do>
         void BroadcastWorker(Do& _do);
 
-        void PlaySoundToTeam(uint32 SoundID, uint32 TeamID);
-        void PlaySoundToAll(uint32 SoundID);
+        void PlaySoundToTeam(uint32 soundID, uint32 teamID);
+        void PlaySoundToAll(uint32 soundID);
         void CastSpellOnTeam(uint32 SpellID, uint32 TeamID);
         void RemoveAuraOnTeam(uint32 SpellID, uint32 TeamID);
         void RewardHonorToTeam(uint32 Honor, uint32 TeamID);
@@ -398,7 +404,7 @@ class TC_GAME_API Battleground
         Group* GetBgRaid(uint32 TeamID) const { return TeamID == ALLIANCE ? m_BgRaids[TEAM_ALLIANCE] : m_BgRaids[TEAM_HORDE]; }
         void SetBgRaid(uint32 TeamID, Group* bg_raid);
 
-        void BuildPvPLogDataPacket(WorldPacket& data);
+        void BuildPvPLogDataPacket(WorldPackets::Battleground::PVPMatchStatistics& pvpLogData);
         virtual bool UpdatePlayerScore(Player* player, uint32 type, uint32 value, bool doAddHonor = true);
 
         static TeamId GetTeamIndexByTeamId(uint32 Team) { return Team == ALLIANCE ? TEAM_ALLIANCE : TEAM_HORDE; }
@@ -463,6 +469,7 @@ class TC_GAME_API Battleground
         Creature* AddCreature(uint32 entry, uint32 type, Position const& pos, TeamId teamId = TEAM_NEUTRAL, uint32 respawntime = 0, Transport* transport = nullptr);
         bool DelCreature(uint32 type);
         bool DelObject(uint32 type);
+        bool RemoveObjectFromWorld(uint32 type);
         virtual bool AddSpiritGuide(uint32 type, float x, float y, float z, float o, TeamId teamId = TEAM_NEUTRAL);
         bool AddSpiritGuide(uint32 type, Position const& pos, TeamId teamId = TEAM_NEUTRAL);
         int32 GetObjectType(ObjectGuid guid);
@@ -495,6 +502,18 @@ class TC_GAME_API Battleground
         // because BattleGrounds with different types and same level range has different m_BracketId
         uint8 GetUniqueBracketId() const;
 
+        BattlegroundPlayer const* GetBattlegroundPlayerData(ObjectGuid const& playerGuid) const
+        {
+            auto itr = m_Players.find(playerGuid);
+            if (itr == m_Players.end())
+                return nullptr;
+
+            return &itr->second;
+        }
+
+        Trinity::unique_weak_ptr<Battleground> GetWeakPtr() const { return m_weakRef; }
+        void SetWeakPtr(Trinity::unique_weak_ptr<Battleground> weakRef) { m_weakRef = std::move(weakRef); }
+
     protected:
         // this method is called, when BG cannot spawn its own spirit guide, or something is wrong, It correctly ends Battleground
         void EndNow();
@@ -524,7 +543,7 @@ class TC_GAME_API Battleground
 
         // these are important variables used for starting messages
         uint8 m_Events;
-        BattlegroundStartTimeIntervals  StartDelayTimes[BG_STARTING_EVENT_COUNT];
+        BattlegroundStartTimeIntervals StartDelayTimes[BG_STARTING_EVENT_COUNT];
         // this must be filled in constructors!
         uint32 StartMessageIds[BG_STARTING_EVENT_COUNT];
 
@@ -592,7 +611,7 @@ class TC_GAME_API Battleground
 
         // Player lists
         GuidVector m_ResurrectQueue;                        // Player GUID
-        GuidDeque m_OfflineQueue;                           // Player GUID
+        std::deque<ObjectGuid> m_OfflineQueue;              // Player GUID
 
         // Invited counters are useful for player invitation to BG - do not allow, if BG is started to one faction to have 2 more players than another faction
         // Invited counters will be changed only when removing already invited player from queue, removing player from battleground and inviting player to BG
@@ -625,5 +644,7 @@ class TC_GAME_API Battleground
         Position StartPosition[PVP_TEAMS_COUNT];
         float m_StartMaxDist;
         uint32 ScriptId;
+
+        Trinity::unique_weak_ptr<Battleground> m_weakRef;
 };
 #endif

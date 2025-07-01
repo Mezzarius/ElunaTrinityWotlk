@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -93,8 +92,8 @@ namespace FactorySelector
         }
         catch (InvalidAIException const& e)
         {
-            TC_LOG_ERROR("entities.unit", "Exception trying to assign script '%s' to Creature (Entry: %u), this Creature will have a default AI. Exception message: %s",
-                creature->GetScriptName().c_str(), creature->GetEntry(), e.what());
+            TC_LOG_ERROR("entities.unit", "Exception trying to assign script '{}' to Creature (Entry: {}), this Creature will have a default AI. Exception message: {}",
+                creature->GetScriptName(), creature->GetEntry(), e.what());
         }
 
         return SelectFactory<CreatureAI>(creature)->Create(creature);
@@ -104,7 +103,7 @@ namespace FactorySelector
     {
         MovementGeneratorType type = unit->GetDefaultMovementType();
         if (Creature* creature = unit->ToCreature())
-            if (!creature->GetPlayerMovingMe())
+            if (!creature->GetCharmerOrSelfPlayer())
                 type = creature->GetDefaultMovementType();
 
         MovementGeneratorCreator const* mv_factory = sMovementGeneratorRegistry->GetRegistryItem(type);

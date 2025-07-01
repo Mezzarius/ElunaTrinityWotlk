@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -931,10 +930,10 @@ struct BattlegroundICScore final : public BattlegroundScore
             }
         }
 
-        void BuildObjectivesBlock(WorldPacket& data) final override;
+        void BuildObjectivesBlock(WorldPackets::Battleground::PVPLogData_Player& playerData) override;
 
-        uint32 GetAttr1() const final override { return BasesAssaulted; }
-        uint32 GetAttr2() const final override { return BasesDefended; }
+        uint32 GetAttr1() const override { return BasesAssaulted; }
+        uint32 GetAttr2() const override { return BasesDefended; }
 
         uint32 BasesAssaulted;
         uint32 BasesDefended;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,6 +21,11 @@
 #include "Errors.h"
 #include "ObjectGuid.h"
 #include "SharedDefines.h"
+
+namespace WorldPackets::Battleground
+{
+struct PVPLogData_Player;
+}
 
 class WorldPacket;
 
@@ -87,13 +92,13 @@ struct BattlegroundScore
                     HealingDone += value;
                     break;
                 default:
-                    ASSERT(false && "Not implemented Battleground score type!");
+                    ABORT_MSG("Not implemented Battleground score type!");
                     break;
             }
         }
 
-        virtual void AppendToPacket(WorldPacket& data);
-        virtual void BuildObjectivesBlock(WorldPacket& /*data*/) = 0;
+        virtual void AppendToPacket(WorldPackets::Battleground::PVPLogData_Player& playerData);
+        virtual void BuildObjectivesBlock(WorldPackets::Battleground::PVPLogData_Player& playerData) = 0;
 
         // For Logging purpose
         virtual std::string ToString() const { return ""; }

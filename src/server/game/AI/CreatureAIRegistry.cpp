@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,6 +23,7 @@
 #include "PassiveAI.h"
 #include "PetAI.h"
 #include "ReactorAI.h"
+#include "ScheduledChangeAI.h"
 #include "SmartAI.h"
 #include "TotemAI.h"
 
@@ -47,6 +47,7 @@ namespace AIRegistry
         (new CreatureAIFactory<TurretAI>("TurretAI"))->RegisterSelf();
         (new CreatureAIFactory<VehicleAI>("VehicleAI"))->RegisterSelf();
         (new CreatureAIFactory<SmartAI>("SmartAI"))->RegisterSelf();
+        (new CreatureAIFactory<ScheduledChangeAI, false>("ScheduledChangeAI"))->RegisterSelf();
 
         (new GameObjectAIFactory<NullGameObjectAI>("NullGameObjectAI"))->RegisterSelf();
         (new GameObjectAIFactory<GameObjectAI>("GameObjectAI"))->RegisterSelf();

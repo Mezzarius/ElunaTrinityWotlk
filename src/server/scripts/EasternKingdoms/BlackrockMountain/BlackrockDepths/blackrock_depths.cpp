@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -40,17 +40,18 @@ class go_shadowforge_brazier : public GameObjectScript
 
             InstanceScript* instance;
 
-            bool GossipHello(Player* /*player*/) override
+            bool OnGossipHello(Player* /*player*/) override
             {
                 if (instance->GetData(TYPE_LYCEUM) == IN_PROGRESS)
                     instance->SetData(TYPE_LYCEUM, DONE);
                 else
                     instance->SetData(TYPE_LYCEUM, IN_PROGRESS);
-                // If used brazier open linked doors (North or South)
-                if (me->GetGUID() == instance->GetGuidData(DATA_SF_BRAZIER_N))
+                // If used both braziers, open linked doors (North and South)
+                if (instance->GetData(TYPE_LYCEUM) == DONE)
+                {
                     instance->HandleGameObject(instance->GetGuidData(DATA_GOLEM_DOOR_N), true);
-                else if (me->GetGUID() == instance->GetGuidData(DATA_SF_BRAZIER_S))
                     instance->HandleGameObject(instance->GetGuidData(DATA_GOLEM_DOOR_S), true);
+                }
 
                 return false;
             }
@@ -105,7 +106,7 @@ public:
                 return false;
 
             instance->SetData(TYPE_RING_OF_LAW, IN_PROGRESS);
-            player->SummonCreature(NPC_GRIMSTONE, 625.559f, -205.618f, -52.735f, 2.609f, TEMPSUMMON_DEAD_DESPAWN, 0);
+            player->SummonCreature(NPC_GRIMSTONE, 625.559f, -205.618f, -52.735f, 2.609f, TEMPSUMMON_DEAD_DESPAWN);
 
             return false;
         }
@@ -177,14 +178,12 @@ public:
         void Reset() override
         {
             Initialize();
-
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
         }
 
         /// @todo move them to center
         void SummonRingMob()
         {
-            if (Creature* tmp = me->SummonCreature(RingMob[MobSpawnId], 608.960f, -235.322f, -53.907f, 1.857f, TEMPSUMMON_DEAD_DESPAWN, 0))
+            if (Creature* tmp = me->SummonCreature(RingMob[MobSpawnId], 608.960f, -235.322f, -53.907f, 1.857f, TEMPSUMMON_DEAD_DESPAWN))
                 RingMobGUID[MobCount] = tmp->GetGUID();
 
             ++MobCount;
@@ -196,7 +195,7 @@ public:
         /// @todo move them to center
         void SummonRingBoss()
         {
-            if (Creature* tmp = me->SummonCreature(RingBoss[rand32() % 6], 644.300f, -175.989f, -53.739f, 3.418f, TEMPSUMMON_DEAD_DESPAWN, 0))
+            if (Creature* tmp = me->SummonCreature(RingBoss[rand32() % 6], 644.300f, -175.989f, -53.739f, 3.418f, TEMPSUMMON_DEAD_DESPAWN))
                 RingBossGUID = tmp->GetGUID();
 
             MobDeath_Timer = 2500;
@@ -436,11 +435,12 @@ enum Lokhtos
     QUEST_A_BINDING_CONTRACT                               = 7604,
     ITEM_SULFURON_INGOT                                    = 17203,
     ITEM_THRORIUM_BROTHERHOOD_CONTRACT                     = 18628,
-    SPELL_CREATE_THORIUM_BROTHERHOOD_CONTRACT_DND          = 23059
+    SPELL_CREATE_THORIUM_BROTHERHOOD_CONTRACT_DND          = 23059,
+    GOSSIP_ITEM_SHOW_ACCESS_MID                            = 4781,       // Show me what I have access to, Lokhtos.
+    GOSSIP_ITEM_SHOW_ACCESS_OID                            = 0,
 };
 
-#define GOSSIP_ITEM_SHOW_ACCESS     "Show me what I have access to, Lothos."
-#define GOSSIP_ITEM_GET_CONTRACT    "Get Thorium Brotherhood Contract"
+#define GOSSIP_ITEM_GET_CONTRACT    "Get Thorium Brotherhood Contract"  // miss in db,maybe wrong
 
 class npc_lokhtos_darkbargainer : public CreatureScript
 {
@@ -451,7 +451,7 @@ class npc_lokhtos_darkbargainer : public CreatureScript
         {
             npc_lokhtos_darkbargainerAI(Creature* creature) : ScriptedAI(creature) { }
 
-            bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+            bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
             {
                 uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
 
@@ -467,13 +467,14 @@ class npc_lokhtos_darkbargainer : public CreatureScript
                 return true;
             }
 
-            bool GossipHello(Player* player) override
+            bool OnGossipHello(Player* player) override
             {
+                InitGossipMenuFor(player, GOSSIP_ITEM_SHOW_ACCESS_MID);
                 if (me->IsQuestGiver())
                     player->PrepareQuestMenu(me->GetGUID());
 
                 if (me->IsVendor() && player->GetReputationRank(59) >= REP_FRIENDLY)
-                    AddGossipItemFor(player, GOSSIP_ICON_VENDOR, GOSSIP_ITEM_SHOW_ACCESS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
+                    AddGossipItemFor(player, GOSSIP_ITEM_SHOW_ACCESS_MID, GOSSIP_ITEM_SHOW_ACCESS_OID, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
 
                 if (!player->GetQuestRewardStatus(QUEST_A_BINDING_CONTRACT) &&
                     !player->HasItemCount(ITEM_THRORIUM_BROTHERHOOD_CONTRACT, 1, true) &&
@@ -600,7 +601,7 @@ public:
             EscortAI::UpdateAI(diff);
         }
 
-        void QuestReward(Player* /*player*/, Quest const* quest, uint32 /*item*/) override
+        void OnQuestReward(Player* /*player*/, Quest const* quest, uint32 /*item*/) override
         {
             if (instance->GetData(TYPE_BAR) == DONE || instance->GetData(TYPE_BAR) == SPECIAL)
                 return;

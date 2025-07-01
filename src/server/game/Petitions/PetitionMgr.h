@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -27,18 +27,22 @@
 
 enum PetitionTurns
 {
-    PETITION_TURN_OK = 0,
-    PETITION_TURN_ALREADY_IN_GUILD = 2,
-    PETITION_TURN_NEED_MORE_SIGNATURES = 4
+    PETITION_TURN_OK                    = 0,
+    PETITION_TURN_ALREADY_IN_GUILD      = 2,
+    PETITION_TURN_NEED_MORE_SIGNATURES  = 4,
+    PETITION_TURN_GUILD_PERMISSIONS     = 11,
 };
 
 enum PetitionSigns
 {
-    PETITION_SIGN_OK = 0,
-    PETITION_SIGN_ALREADY_SIGNED = 1,
-    PETITION_SIGN_ALREADY_IN_GUILD = 2,
-    PETITION_SIGN_CANT_SIGN_OWN = 3,
-    PETITION_SIGN_NOT_SERVER = 4
+    PETITION_SIGN_OK                    = 0,
+    PETITION_SIGN_ALREADY_SIGNED        = 1,
+    PETITION_SIGN_ALREADY_IN_GUILD      = 2,
+    PETITION_SIGN_CANT_SIGN_OWN         = 3,
+    PETITION_SIGN_NOT_SERVER            = 5,
+    PETITION_SIGN_FULL                  = 8,
+    PETITION_SIGN_ALREADY_SIGNED_OTHER  = 10,
+    PETITION_SIGN_RESTRICTED_ACCOUNT    = 11,
 };
 
 typedef std::pair<uint32, ObjectGuid> Signature;

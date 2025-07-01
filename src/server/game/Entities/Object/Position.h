@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,10 +26,11 @@ class ByteBuffer;
 
 struct TC_GAME_API Position
 {
-    Position(float x = 0, float y = 0, float z = 0, float o = 0)
-        : m_positionX(x), m_positionY(y), m_positionZ(z), m_orientation(NormalizeOrientation(o)) { }
+    Position()
+        : m_positionX(0.0f), m_positionY(0.0f), m_positionZ(0.0f), m_orientation(0.0f) { }
 
-    Position(Position const& loc) { Relocate(loc); }
+    Position(float x, float y, float z = 0.0f, float o = 0.0f)
+        : m_positionX(x), m_positionY(y), m_positionZ(z), m_orientation(NormalizeOrientation(o)) { }
 
     // streamer tags
     struct XY;
@@ -60,8 +61,7 @@ private:
     float m_orientation;
 
 public:
-    bool operator==(Position const& a);
-    bool operator!=(Position const& a) { return !(operator==(a)); }
+    bool operator==(Position const& a) const;
 
     void Relocate(float x, float y) { m_positionX = x; m_positionY = y; }
     void Relocate(float x, float y, float z) { Relocate(x, y); m_positionZ = z; }
@@ -167,14 +167,14 @@ public:
 class WorldLocation : public Position
 {
     public:
-        explicit WorldLocation(uint32 _mapId = MAPID_INVALID, float x = 0.f, float y = 0.f, float z = 0.f, float o = 0.f)
+        explicit WorldLocation()
+            : m_mapId(MAPID_INVALID) { }
+
+        explicit WorldLocation(uint32 _mapId, float x, float y, float z = 0.0f, float o = 0.0f)
             : Position(x, y, z, o), m_mapId(_mapId) { }
 
         WorldLocation(uint32 mapId, Position const& position)
             : Position(position), m_mapId(mapId) { }
-
-        WorldLocation(WorldLocation const& loc)
-            : Position(loc), m_mapId(loc.GetMapId()) { }
 
         void WorldRelocate(WorldLocation const& loc) { m_mapId = loc.GetMapId(); Relocate(loc); }
         void WorldRelocate(WorldLocation const* loc) { m_mapId = loc->GetMapId(); Relocate(loc); }
@@ -208,7 +208,8 @@ TC_GAME_API ByteBuffer& operator<<(ByteBuffer& buf, Position::ConstStreamer<Posi
 template <class Tag>
 struct TaggedPosition
 {
-    TaggedPosition(float x = 0.0f, float y = 0.0f, float z = 0.0f, float o = 0.0f) : Pos(x, y, z, o) { }
+    TaggedPosition() { }
+    TaggedPosition(float x, float y, float z = 0.0f, float o = 0.0f) : Pos(x, y, z, o) { }
     TaggedPosition(Position const& pos) : Pos(pos) { }
 
     TaggedPosition& operator=(Position const& pos)

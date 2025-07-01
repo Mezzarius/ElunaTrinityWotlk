@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -55,7 +54,7 @@ void FleeingMovementGenerator<T>::DoInitialize(T* owner)
         return;
 
     // TODO: UNIT_FIELD_FLAGS should not be handled by generators
-    owner->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
+    owner->SetUnitFlag(UNIT_FLAG_FLEEING);
 
     _path = nullptr;
     SetTargetLocation(owner);
@@ -114,7 +113,7 @@ void FleeingMovementGenerator<Player>::DoFinalize(Player* owner, bool active, bo
 
     if (active)
     {
-        owner->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
+        owner->RemoveUnitFlag(UNIT_FLAG_FLEEING);
         owner->ClearUnitState(UNIT_STATE_FLEEING_MOVE);
         owner->StopMoving();
     }
@@ -127,7 +126,7 @@ void FleeingMovementGenerator<Creature>::DoFinalize(Creature* owner, bool active
 
     if (active)
     {
-        owner->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
+        owner->RemoveUnitFlag(UNIT_FLAG_FLEEING);
         owner->ClearUnitState(UNIT_STATE_FLEEING_MOVE);
         if (owner->GetVictim())
             owner->SetTarget(owner->EnsureVictim()->GetGUID());
@@ -165,7 +164,9 @@ void FleeingMovementGenerator<T>::SetTargetLocation(T* owner)
     }
 
     bool result = _path->CalculatePath(destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
-    if (!result || (_path->GetPathType() & PATHFIND_NOPATH) || (_path->GetPathType() & PATHFIND_SHORTCUT))
+    if (!result || (_path->GetPathType() & PATHFIND_NOPATH)
+                || (_path->GetPathType() & PATHFIND_SHORTCUT)
+                || (_path->GetPathType() & PATHFIND_FARFROMPOLY))
     {
         _timer.Reset(100);
         return;
@@ -249,13 +250,13 @@ bool TimedFleeingMovementGenerator::Update(Unit* owner, uint32 diff)
     return FleeingMovementGenerator<Creature>::DoUpdate(owner->ToCreature(), diff);
 }
 
-void TimedFleeingMovementGenerator::Finalize(Unit* owner, bool active, bool/* movementInform*/)
+void TimedFleeingMovementGenerator::Finalize(Unit* owner, bool active, bool movementInform)
 {
     AddFlag(MOVEMENTGENERATOR_FLAG_FINALIZED);
     if (!active)
         return;
 
-    owner->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
+    owner->RemoveUnitFlag(UNIT_FLAG_FLEEING);
     owner->StopMoving();
     if (Unit* victim = owner->GetVictim())
     {
@@ -264,6 +265,13 @@ void TimedFleeingMovementGenerator::Finalize(Unit* owner, bool active, bool/* mo
             owner->AttackStop();
             owner->ToCreature()->AI()->AttackStart(victim);
         }
+    }
+
+    if (movementInform)
+    {
+        Creature* ownerCreature = owner->ToCreature();
+        if (CreatureAI* AI = ownerCreature ? ownerCreature->AI() : nullptr)
+            AI->MovementInform(TIMED_FLEEING_MOTION_TYPE, 0);
     }
 }
 

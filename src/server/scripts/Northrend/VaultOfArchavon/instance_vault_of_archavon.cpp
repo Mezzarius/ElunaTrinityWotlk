@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,7 +18,6 @@
 #include "ScriptMgr.h"
 #include "GameTime.h"
 #include "InstanceScript.h"
-#include "Map.h"
 #include "vault_of_archavon.h"
 
 /* Vault of Archavon encounters:
@@ -44,7 +43,7 @@ class instance_vault_of_archavon : public InstanceMapScript
 
         struct instance_vault_of_archavon_InstanceMapScript : public InstanceScript
         {
-            instance_vault_of_archavon_InstanceMapScript(Map* map) : InstanceScript(map)
+            instance_vault_of_archavon_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
             {
                 SetHeaders(DataHeader);
                 SetBossNumber(EncounterCount);

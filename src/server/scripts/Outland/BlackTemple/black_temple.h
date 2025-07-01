@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -54,11 +54,11 @@ enum BTDataTypes
     DATA_ESSENCE_OF_DESIRE          = 21,
     DATA_ESSENCE_OF_ANGER           = 22,
     DATA_ILLIDAN_MUSIC_CONTROLLER   = 23,
-    DATA_TERON_GOREFIEND_INTRO      = 24,
-    DATA_AKAMA_ILLIDAN_INTRO        = 25
+    DATA_AKAMA_ILLIDAN_INTRO        = 24,
+    DATA_RELIQUARY_COMBAT_TRIGGER   = 25
 };
 
-enum TriggerEmotes
+enum BTTexts
 {
     EMOTE_HIGH_WARLORD_NAJENTUS_DIED = 0,
     EMOTE_DEN_OF_MORTAL_DOOR_OPEN    = 1
@@ -108,7 +108,8 @@ enum BTCreatureIds
     NPC_DEMON_FIRE                  = 23069,
     NPC_PARASITIC_SHADOWFIEND       = 23498,
     NPC_BLAZE                       = 23259,
-    NPC_FLAME_CRASH                 = 23336
+    NPC_FLAME_CRASH                 = 23336,
+    NPC_RELIQUARY_COMBAT_TRIGGER    = 23417
 };
 
 enum BTGameObjectIds
@@ -131,9 +132,8 @@ enum BTGameObjectIds
     GO_ILLIDAN_MUSIC_CONTROLLER     = 185966
 };
 
-enum BlackTempleMisc
+enum BTMisc
 {
-    AKAMA_FACTION_COMBAT            = 1868,
     AKAMA_INTRO                     = 1,
     AKAMA_FIGHT                     = 2,
     ACTION_ACTIVE_AKAMA_INTRO       = 3,

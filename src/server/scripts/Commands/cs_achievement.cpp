@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,20 +29,18 @@ EndScriptData */
 #include "Player.h"
 #include "RBAC.h"
 
+using namespace Trinity::ChatCommands;
+
 class achievement_commandscript : public CommandScript
 {
 public:
     achievement_commandscript() : CommandScript("achievement_commandscript") { }
 
-    std::vector<ChatCommand> GetCommands() const override
+    ChatCommandTable GetCommands() const override
     {
-        static std::vector<ChatCommand> achievementCommandTable =
+        static ChatCommandTable commandTable =
         {
-            { "add", rbac::RBAC_PERM_COMMAND_ACHIEVEMENT_ADD, false, &HandleAchievementAddCommand, "" },
-        };
-        static std::vector<ChatCommand> commandTable =
-        {
-            { "achievement", rbac::RBAC_PERM_COMMAND_ACHIEVEMENT,  false, nullptr, "", achievementCommandTable },
+            { "achievement add", HandleAchievementAddCommand, LANG_COMMAND_ACHIEVEMENT_ADD_HELP ,rbac::RBAC_PERM_COMMAND_ACHIEVEMENT_ADD, Console::No },
         };
         return commandTable;
     }

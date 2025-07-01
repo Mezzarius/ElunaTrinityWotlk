@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,16 +20,15 @@
 #include "model.h"
 #include "wmo.h"
 #include "adtfile.h"
-#include "mpq_libmpq04.h"
+#include "mpq_libmpq.h"
 #include "VMapDefinitions.h"
 #include <G3D/Quat.h>
 #include <algorithm>
 #include <cstdio>
 #include <limits>
 
-Model::Model(std::string &filename) : filename(filename), vertices(0), indices(0)
+Model::Model(std::string &filename) : filename(filename), header(), vertices(nullptr), indices(nullptr)
 {
-    memset(&header, 0, sizeof(header));
 }
 
 bool Model::open()
@@ -135,7 +133,6 @@ bool Model::ConvertToVMAPModel(const char * outfilename)
     return true;
 }
 
-
 Vec3D fixCoordSystem(Vec3D const& v)
 {
     return Vec3D(v.x, v.z, -v.y);
@@ -143,7 +140,7 @@ Vec3D fixCoordSystem(Vec3D const& v)
 
 void Doodad::Extract(ADT::MDDF const& doodadDef, char const* ModelInstName, uint32 mapID, uint32 tileX, uint32 tileY, FILE* pDirfile)
 {
-    char tempname[512];
+    char tempname[1036];
     sprintf(tempname, "%s/%s", szWorkDirWmo, ModelInstName);
     FILE* input = fopen(tempname, "r+b");
 
@@ -217,7 +214,7 @@ void Doodad::ExtractSet(WMODoodadData const& doodadData, ADT::MODF const& wmo, u
             }
         }
 
-        char tempname[512];
+        char tempname[1036];
         sprintf(tempname, "%s/%s", szWorkDirWmo, ModelInstName);
         FILE* input = fopen(tempname, "r+b");
         if (!input)
@@ -265,4 +262,3 @@ void Doodad::ExtractSet(WMODoodadData const& doodadData, ADT::MODF const& wmo, u
         fwrite(ModelInstName, sizeof(char), nlen, pDirfile);
     }
 }
-

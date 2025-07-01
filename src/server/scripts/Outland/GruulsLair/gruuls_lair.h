@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -43,7 +43,7 @@ enum GLCreatureIds
 
 enum GLGameObjectIds
 {
-    GO_MAULGAR_DOOR             = 184468,
+    GO_MAULGAR_DOOR             = 183817,
     GO_GRUUL_DOOR               = 184662
 };
 
@@ -52,5 +52,7 @@ inline AI* GetGruulsLairAI(T* obj)
 {
     return GetInstanceAI<AI>(obj, GLScriptName);
 }
+
+#define RegisterGruulsLairCreatureAI(ai_name) RegisterCreatureAIWithFactory(ai_name, GetGruulsLairAI)
 
 #endif // GRUULS_LAIR_H_

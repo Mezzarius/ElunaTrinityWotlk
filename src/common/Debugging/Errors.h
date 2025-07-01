@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,18 +23,19 @@
 
 namespace Trinity
 {
-    DECLSPEC_NORETURN TC_COMMON_API void Assert(char const* file, int line, char const* function, std::string debugInfo, char const* message) ATTR_NORETURN;
-    DECLSPEC_NORETURN TC_COMMON_API void Assert(char const* file, int line, char const* function, std::string debugInfo, char const* message, char const* format, ...) ATTR_NORETURN ATTR_PRINTF(6, 7);
+    [[noreturn]] TC_COMMON_API void Assert(char const* file, int line, char const* function, std::string debugInfo, char const* message);
+    [[noreturn]] TC_COMMON_API void Assert(char const* file, int line, char const* function, std::string debugInfo, char const* message, char const* format, ...) ATTR_PRINTF(6, 7);
 
-    DECLSPEC_NORETURN TC_COMMON_API void Fatal(char const* file, int line, char const* function, char const* message, ...) ATTR_NORETURN ATTR_PRINTF(4, 5);
+    [[noreturn]] TC_COMMON_API void Fatal(char const* file, int line, char const* function, char const* message, ...) ATTR_PRINTF(4, 5);
 
-    DECLSPEC_NORETURN TC_COMMON_API void Error(char const* file, int line, char const* function, char const* message) ATTR_NORETURN;
+    [[noreturn]] TC_COMMON_API void Error(char const* file, int line, char const* function, char const* message);
 
-    DECLSPEC_NORETURN TC_COMMON_API void Abort(char const* file, int line, char const* function) ATTR_NORETURN;
+    [[noreturn]] TC_COMMON_API void Abort(char const* file, int line, char const* function);
+    [[noreturn]] TC_COMMON_API void Abort(char const* file, int line, char const* function, char const* message, ...);
 
     TC_COMMON_API void Warning(char const* file, int line, char const* function, char const* message);
 
-    DECLSPEC_NORETURN TC_COMMON_API void AbortHandler(int sigval) ATTR_NORETURN;
+    [[noreturn]] TC_COMMON_API void AbortHandler(int sigval);
 
 } // namespace Trinity
 
@@ -59,6 +59,7 @@ TC_COMMON_API std::string GetDebugInfo();
 #define WPError(cond, msg) ASSERT_BEGIN do { if (!(cond)) Trinity::Error(__FILE__, __LINE__, __FUNCTION__, (msg)); } while(0) ASSERT_END
 #define WPWarning(cond, msg) ASSERT_BEGIN do { if (!(cond)) Trinity::Warning(__FILE__, __LINE__, __FUNCTION__, (msg)); } while(0) ASSERT_END
 #define WPAbort() ASSERT_BEGIN do { Trinity::Abort(__FILE__, __LINE__, __FUNCTION__); } while(0) ASSERT_END
+#define WPAbort_MSG(msg, ...) ASSERT_BEGIN do { Trinity::Abort(__FILE__, __LINE__, __FUNCTION__, (msg), ##__VA_ARGS__); } while(0) ASSERT_END
 
 #ifdef PERFORMANCE_PROFILING
 #define ASSERT(cond, ...) ((void)0)
@@ -68,7 +69,10 @@ TC_COMMON_API std::string GetDebugInfo();
 #define ASSERT_NODEBUGINFO WPAssert_NODEBUGINFO
 #endif
 
+#define ASSERT_WITH_SIDE_EFFECTS WPAssert
+
 #define ABORT WPAbort
+#define ABORT_MSG WPAbort_MSG
 
 template <typename T>
 inline T* ASSERT_NOTNULL_IMPL(T* pointer, char const* expr)

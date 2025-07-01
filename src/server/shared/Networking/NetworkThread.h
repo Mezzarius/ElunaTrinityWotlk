@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -122,8 +122,8 @@ protected:
     {
         TC_LOG_DEBUG("misc", "Network Thread Starting");
 
-        _updateTimer.expires_from_now(boost::posix_time::milliseconds(10));
-        _updateTimer.async_wait(std::bind(&NetworkThread<SocketType>::Update, this));
+        _updateTimer.expires_after(1ms);
+        _updateTimer.async_wait([this](boost::system::error_code const&) { Update(); });
         _ioContext.run();
 
         TC_LOG_DEBUG("misc", "Network Thread exits");
@@ -136,8 +136,8 @@ protected:
         if (_stopped)
             return;
 
-        _updateTimer.expires_from_now(boost::posix_time::milliseconds(10));
-        _updateTimer.async_wait(std::bind(&NetworkThread<SocketType>::Update, this));
+        _updateTimer.expires_after(1ms);
+        _updateTimer.async_wait([this](boost::system::error_code const&) { Update(); });
 
         AddNewSockets();
 

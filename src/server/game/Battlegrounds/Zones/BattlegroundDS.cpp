@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -60,7 +59,7 @@ void BattlegroundDS::PostUpdateImpl(uint32 diff)
                 DoorOpen(BG_DS_OBJECT_WATER_1);
                 DoorOpen(BG_DS_OBJECT_WATER_2);
                 _events.CancelEvent(BG_DS_EVENT_WATERFALL_KNOCKBACK);
-                _events.ScheduleEvent(BG_DS_EVENT_WATERFALL_WARNING, urand(BG_DS_WATERFALL_TIMER_MIN, BG_DS_WATERFALL_TIMER_MAX));
+                _events.ScheduleEvent(BG_DS_EVENT_WATERFALL_WARNING, BG_DS_WATERFALL_TIMER_MIN, BG_DS_WATERFALL_TIMER_MAX);
                 break;
             case BG_DS_EVENT_WATERFALL_KNOCKBACK:
                 // Repeat knockback while the waterfall still active
@@ -106,7 +105,7 @@ void BattlegroundDS::StartingEventOpenDoors()
     for (uint32 i = BG_DS_OBJECT_BUFF_1; i <= BG_DS_OBJECT_BUFF_2; ++i)
         SpawnBGObject(i, 60);
 
-    _events.ScheduleEvent(BG_DS_EVENT_WATERFALL_WARNING, urand(BG_DS_WATERFALL_TIMER_MIN, BG_DS_WATERFALL_TIMER_MAX));
+    _events.ScheduleEvent(BG_DS_EVENT_WATERFALL_WARNING, BG_DS_WATERFALL_TIMER_MIN, BG_DS_WATERFALL_TIMER_MAX);
     //for (uint8 i = 0; i < BG_DS_PIPE_KNOCKBACK_TOTAL_COUNT; ++i)
     //    _events.ScheduleEvent(BG_DS_EVENT_PIPE_KNOCKBACK, BG_DS_PIPE_KNOCKBACK_FIRST_DELAY + i * BG_DS_PIPE_KNOCKBACK_DELAY);
 

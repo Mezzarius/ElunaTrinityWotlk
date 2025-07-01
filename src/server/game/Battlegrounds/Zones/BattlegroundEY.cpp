@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,6 +17,7 @@
 
 #include "BattlegroundEY.h"
 #include "BattlegroundMgr.h"
+#include "BattlegroundPackets.h"
 #include "Creature.h"
 #include "DBCStores.h"
 #include "GameObject.h"
@@ -27,7 +27,6 @@
 #include "Player.h"
 #include "Random.h"
 #include "Util.h"
-#include "WorldPacket.h"
 #include "WorldStatePackets.h"
 
 // these variables aren't used outside of this file, so declare them only here
@@ -37,10 +36,9 @@ uint32 BG_EY_HonorScoreTicks[BG_HONOR_MODE_NUM] =
     160  // holiday
 };
 
-void BattlegroundEYScore::BuildObjectivesBlock(WorldPacket& data)
+void BattlegroundEYScore::BuildObjectivesBlock(WorldPackets::Battleground::PVPLogData_Player& playerData)
 {
-    data << uint32(1); // Objectives Count
-    data << uint32(FlagCaptures);
+    playerData.Stats = { FlagCaptures };
 }
 
 BattlegroundEY::BattlegroundEY()
@@ -177,7 +175,7 @@ void BattlegroundEY::CheckSomeoneJoinedPoint()
                 Player* player = ObjectAccessor::FindPlayer(m_PlayersNearPoint[EY_POINTS_MAX][j]);
                 if (!player)
                 {
-                    TC_LOG_ERROR("bg.battleground", "BattlegroundEY:CheckSomeoneJoinedPoint: Player (%s) could not be found!", m_PlayersNearPoint[EY_POINTS_MAX][j].ToString().c_str());
+                    TC_LOG_ERROR("bg.battleground", "BattlegroundEY:CheckSomeoneJoinedPoint: Player ({}) could not be found!", m_PlayersNearPoint[EY_POINTS_MAX][j].ToString());
                     ++j;
                     continue;
                 }
@@ -218,7 +216,7 @@ void BattlegroundEY::CheckSomeoneLeftPoint()
                 Player* player = ObjectAccessor::FindPlayer(m_PlayersNearPoint[i][j]);
                 if (!player)
                 {
-                    TC_LOG_ERROR("bg.battleground", "BattlegroundEY:CheckSomeoneLeftPoint Player (%s) could not be found!", m_PlayersNearPoint[i][j].ToString().c_str());
+                    TC_LOG_ERROR("bg.battleground", "BattlegroundEY:CheckSomeoneLeftPoint Player ({}) could not be found!", m_PlayersNearPoint[i][j].ToString());
                     //move non-existing players to "free space" - this will cause many errors showing in log, but it is a very important bug
                     m_PlayersNearPoint[EY_POINTS_MAX].push_back(m_PlayersNearPoint[i][j]);
                     m_PlayersNearPoint[i].erase(m_PlayersNearPoint[i].begin() + j);
@@ -359,8 +357,10 @@ void BattlegroundEY::UpdatePointsIcons(uint32 Team, uint32 Point)
 
 void BattlegroundEY::AddPlayer(Player* player)
 {
+    bool const isInBattleground = IsPlayerInBattleground(player->GetGUID());
     Battleground::AddPlayer(player);
-    PlayerScores[player->GetGUID().GetCounter()] = new BattlegroundEYScore(player->GetGUID());
+    if (!isInBattleground)
+        PlayerScores[player->GetGUID().GetCounter()] = new BattlegroundEYScore(player->GetGUID());
 
     m_PlayersNearPoint[EY_POINTS_MAX].push_back(player->GetGUID());
 }
@@ -504,25 +504,25 @@ bool BattlegroundEY::SetupBattleground()
         AreaTriggerEntry const* at = sAreaTriggerStore.LookupEntry(m_Points_Trigger[i]);
         if (!at)
         {
-            TC_LOG_ERROR("bg.battleground", "BattlegroundEY: Unknown trigger: %u", m_Points_Trigger[i]);
+            TC_LOG_ERROR("bg.battleground", "BattlegroundEY: Unknown trigger: {}", m_Points_Trigger[i]);
             continue;
         }
-        if (!AddObject(BG_EY_OBJECT_SPEEDBUFF_FEL_REAVER + i * 3, Buff_Entries[0], at->x, at->y, at->z, 0.907571f, 0, 0, 0.438371f, 0.898794f, RESPAWN_ONE_DAY)
-            || !AddObject(BG_EY_OBJECT_SPEEDBUFF_FEL_REAVER + i * 3 + 1, Buff_Entries[1], at->x, at->y, at->z, 0.907571f, 0, 0, 0.438371f, 0.898794f, RESPAWN_ONE_DAY)
-            || !AddObject(BG_EY_OBJECT_SPEEDBUFF_FEL_REAVER + i * 3 + 2, Buff_Entries[2], at->x, at->y, at->z, 0.907571f, 0, 0, 0.438371f, 0.898794f, RESPAWN_ONE_DAY)
+        if (!AddObject(BG_EY_OBJECT_SPEEDBUFF_FEL_REAVER + i * 3, Buff_Entries[0], at->Pos.X, at->Pos.Y, at->Pos.Z, 0.907571f, 0, 0, 0.438371f, 0.898794f, RESPAWN_ONE_DAY)
+            || !AddObject(BG_EY_OBJECT_SPEEDBUFF_FEL_REAVER + i * 3 + 1, Buff_Entries[1], at->Pos.X, at->Pos.Y, at->Pos.Z, 0.907571f, 0, 0, 0.438371f, 0.898794f, RESPAWN_ONE_DAY)
+            || !AddObject(BG_EY_OBJECT_SPEEDBUFF_FEL_REAVER + i * 3 + 2, Buff_Entries[2], at->Pos.X, at->Pos.Y, at->Pos.Z, 0.907571f, 0, 0, 0.438371f, 0.898794f, RESPAWN_ONE_DAY)
 )
             TC_LOG_ERROR("bg.battleground", "BattlegroundEY: Could not spawn Speedbuff Fel Reaver.");
     }
 
     WorldSafeLocsEntry const* sg = sWorldSafeLocsStore.LookupEntry(EY_GRAVEYARD_MAIN_ALLIANCE);
-    if (!sg || !AddSpiritGuide(EY_SPIRIT_MAIN_ALLIANCE, sg->x, sg->y, sg->z, 3.124139f, TEAM_ALLIANCE))
+    if (!sg || !AddSpiritGuide(EY_SPIRIT_MAIN_ALLIANCE, sg->Loc.X, sg->Loc.Y, sg->Loc.Z, 3.124139f, TEAM_ALLIANCE))
     {
         TC_LOG_ERROR("sql.sql", "BatteGroundEY: Failed to spawn spirit guide. The battleground was not created.");
         return false;
     }
 
     sg = sWorldSafeLocsStore.LookupEntry(EY_GRAVEYARD_MAIN_HORDE);
-    if (!sg || !AddSpiritGuide(EY_SPIRIT_MAIN_HORDE, sg->x, sg->y, sg->z, 3.193953f, TEAM_HORDE))
+    if (!sg || !AddSpiritGuide(EY_SPIRIT_MAIN_HORDE, sg->Loc.X, sg->Loc.Y, sg->Loc.Z, 3.193953f, TEAM_HORDE))
     {
         TC_LOG_ERROR("sql.sql", "BatteGroundEY: Failed to spawn spirit guide. The battleground was not created.");
         return false;
@@ -590,7 +590,7 @@ void BattlegroundEY::RespawnFlagAfterDrop()
     if (obj)
         obj->Delete();
     else
-        TC_LOG_ERROR("bg.battleground", "BattlegroundEY: Unknown dropped flag (%s).", GetDroppedFlagGUID().ToString().c_str());
+        TC_LOG_ERROR("bg.battleground", "BattlegroundEY: Unknown dropped flag ({}).", GetDroppedFlagGUID().ToString());
 
     SetDroppedFlagGUID(ObjectGuid::Empty);
 }
@@ -759,8 +759,8 @@ void BattlegroundEY::EventTeamCapturedPoint(Player* player, uint32 Point)
         DelCreature(Point);
 
     WorldSafeLocsEntry const* sg = sWorldSafeLocsStore.LookupEntry(m_CapturingPointTypes[Point].GraveyardId);
-    if (!sg || !AddSpiritGuide(Point, sg->x, sg->y, sg->z, 3.124139f, GetTeamIndexByTeamId(Team)))
-        TC_LOG_ERROR("bg.battleground", "BatteGroundEY: Failed to spawn spirit guide. point: %u, team: %u, graveyard_id: %u",
+    if (!sg || !AddSpiritGuide(Point, sg->Loc.X, sg->Loc.Y, sg->Loc.Z, 3.124139f, GetTeamIndexByTeamId(Team)))
+        TC_LOG_ERROR("bg.battleground", "BatteGroundEY: Failed to spawn spirit guide. point: {}, team: {}, graveyard_id: {}",
             Point, Team, m_CapturingPointTypes[Point].GraveyardId);
 
 //    SpawnBGCreature(Point, RESPAWN_IMMEDIATELY);
@@ -898,7 +898,7 @@ WorldSafeLocsEntry const* BattlegroundEY::GetClosestGraveyard(Player* player)
     float plr_y = player->GetPositionY();
     float plr_z = player->GetPositionZ();
 
-    distance = (entry->x - plr_x)*(entry->x - plr_x) + (entry->y - plr_y)*(entry->y - plr_y) + (entry->z - plr_z)*(entry->z - plr_z);
+    distance = (entry->Loc.X - plr_x)*(entry->Loc.X - plr_x) + (entry->Loc.Y - plr_y)*(entry->Loc.Y - plr_y) + (entry->Loc.Z - plr_z)*(entry->Loc.Z - plr_z);
     nearestDistance = distance;
 
     for (uint8 i = 0; i < EY_POINTS_MAX; ++i)
@@ -907,10 +907,10 @@ WorldSafeLocsEntry const* BattlegroundEY::GetClosestGraveyard(Player* player)
         {
             entry = sWorldSafeLocsStore.LookupEntry(m_CapturingPointTypes[i].GraveyardId);
             if (!entry)
-                TC_LOG_ERROR("bg.battleground", "BattlegroundEY: Graveyard %u could not be found.", m_CapturingPointTypes[i].GraveyardId);
+                TC_LOG_ERROR("bg.battleground", "BattlegroundEY: Graveyard {} could not be found.", m_CapturingPointTypes[i].GraveyardId);
             else
             {
-                distance = (entry->x - plr_x)*(entry->x - plr_x) + (entry->y - plr_y)*(entry->y - plr_y) + (entry->z - plr_z)*(entry->z - plr_z);
+                distance = (entry->Loc.X - plr_x)*(entry->Loc.X - plr_x) + (entry->Loc.Y - plr_y)*(entry->Loc.Y - plr_y) + (entry->Loc.Z - plr_z)*(entry->Loc.Z - plr_z);
                 if (distance < nearestDistance)
                 {
                     nearestDistance = distance;

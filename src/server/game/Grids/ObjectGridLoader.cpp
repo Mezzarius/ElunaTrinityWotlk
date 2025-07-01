@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -80,31 +79,14 @@ class ObjectWorldLoader
         uint32& i_corpses;
 };
 
-template<class T> void ObjectGridLoader::SetObjectCell(T* /*obj*/, CellCoord const& /*cellCoord*/) { }
-
-template<> void ObjectGridLoader::SetObjectCell(Creature* obj, CellCoord const& cellCoord)
-{
-    Cell cell(cellCoord);
-    obj->SetCurrentCell(cell);
-}
-
-template<> void ObjectGridLoader::SetObjectCell(GameObject* obj, CellCoord const& cellCoord)
+void ObjectGridLoader::SetObjectCell(MapObject* obj, CellCoord const& cellCoord)
 {
     Cell cell(cellCoord);
     obj->SetCurrentCell(cell);
 }
 
 template <class T>
-void AddObjectHelper(CellCoord &cell, GridRefManager<T> &m, uint32 &count, Map* /*map*/, T *obj)
-{
-    obj->AddToGrid(m);
-    ObjectGridLoader::SetObjectCell(obj, cell);
-    obj->AddToWorld();
-    ++count;
-}
-
-template <>
-void AddObjectHelper(CellCoord &cell, CreatureMapType &m, uint32 &count, Map* map, Creature *obj)
+void AddObjectHelper(CellCoord &cell, GridRefManager<T> &m, uint32 &count, Map* map, T *obj)
 {
     obj->AddToGrid(m);
     ObjectGridLoader::SetObjectCell(obj, cell);
@@ -120,64 +102,34 @@ void LoadHelper(CellGuidSet const& guid_set, CellCoord &cell, GridRefManager<T> 
 {
     for (CellGuidSet::const_iterator i_guid = guid_set.begin(); i_guid != guid_set.end(); ++i_guid)
     {
+        // Don't spawn at all if there's a respawn timer
+        ObjectGuid::LowType guid = *i_guid;
+        if (!map->ShouldBeSpawnedOnGridLoad<T>(guid))
+            continue;
+
         T* obj = new T;
-
-        // Don't spawn at all if there's a respawn time
-        if ((obj->GetTypeId() == TYPEID_UNIT && !map->GetCreatureRespawnTime(*i_guid)) || (obj->GetTypeId() == TYPEID_GAMEOBJECT && !map->GetGORespawnTime(*i_guid)))
+        //TC_LOG_INFO("misc", "DEBUG: LoadHelper from table: {} for (guid: {}) Loading", table, guid);
+        if (!obj->LoadFromDB(guid, map, false, false))
         {
-            ObjectGuid::LowType guid = *i_guid;
-            //TC_LOG_INFO("misc", "DEBUG: LoadHelper from table: %s for (guid: %u) Loading", table, guid);
-
-            if (obj->GetTypeId() == TYPEID_UNIT)
-            {
-                CreatureData const* cdata = sObjectMgr->GetCreatureData(guid);
-                ASSERT(cdata, "Tried to load creature with spawnId %u, but no such creature exists.", guid);
-                SpawnGroupTemplateData const* const group = cdata->spawnGroupData;
-                // If creature in manual spawn group, don't spawn here, unless group is already active.
-                if (!(group->flags & SPAWNGROUP_FLAG_SYSTEM))
-                    if (!map->IsSpawnGroupActive(group->groupId))
-                    {
-                        delete obj;
-                        continue;
-                    }
-            }
-            else if (obj->GetTypeId() == TYPEID_GAMEOBJECT)
-            {
-                // If gameobject in manual spawn group, don't spawn here, unless group is already active.
-                GameObjectData const* godata = sObjectMgr->GetGameObjectData(guid);
-                ASSERT(godata, "Tried to load gameobject with spawnId %u, but no such object exists.", guid);
-                if (!(godata->spawnGroupData->flags & SPAWNGROUP_FLAG_SYSTEM))
-                    if (!map->IsSpawnGroupActive(godata->spawnGroupData->groupId))
-                    {
-                        delete obj;
-                        continue;
-                    }
-            }
-
-            if (!obj->LoadFromDB(guid, map, false, false))
-            {
-                delete obj;
-                continue;
-            }
-            AddObjectHelper(cell, m, count, map, obj);
-        }
-        else
             delete obj;
+            continue;
+        }
+        AddObjectHelper(cell, m, count, map, obj);
     }
 }
 
 void ObjectGridLoader::Visit(GameObjectMapType &m)
 {
     CellCoord cellCoord = i_cell.GetCellCoord();
-    CellObjectGuids const& cell_guids = sObjectMgr->GetCellObjectGuids(i_map->GetId(), i_map->GetSpawnMode(), cellCoord.GetId());
-    LoadHelper(cell_guids.gameobjects, cellCoord, m, i_gameObjects, i_map);
+    if (CellObjectGuids const* cell_guids = sObjectMgr->GetCellObjectGuids(i_map->GetId(), i_map->GetSpawnMode(), cellCoord.GetId()))
+        LoadHelper(cell_guids->gameobjects, cellCoord, m, i_gameObjects, i_map);
 }
 
 void ObjectGridLoader::Visit(CreatureMapType &m)
 {
     CellCoord cellCoord = i_cell.GetCellCoord();
-    CellObjectGuids const& cell_guids = sObjectMgr->GetCellObjectGuids(i_map->GetId(), i_map->GetSpawnMode(), cellCoord.GetId());
-    LoadHelper(cell_guids.creatures, cellCoord, m, i_creatures, i_map);
+    if (CellObjectGuids const* cell_guids = sObjectMgr->GetCellObjectGuids(i_map->GetId(), i_map->GetSpawnMode(), cellCoord.GetId()))
+        LoadHelper(cell_guids->creatures, cellCoord, m, i_creatures, i_map);
 }
 
 void ObjectWorldLoader::Visit(CorpseMapType& /*m*/)
@@ -189,7 +141,7 @@ void ObjectWorldLoader::Visit(CorpseMapType& /*m*/)
         {
             corpse->AddToWorld();
             GridType& cell = i_grid.GetGridType(i_cell.CellX(), i_cell.CellY());
-            if (corpse->IsWorldObject())
+            if (corpse->IsStoredInWorldObjectGridContainer())
                 cell.AddWorldObject(corpse);
             else
                 cell.AddGridObject(corpse);
@@ -224,7 +176,7 @@ void ObjectGridLoader::LoadN(void)
             }
         }
     }
-    TC_LOG_DEBUG("maps", "%u GameObjects, %u Creatures, and %u Corpses/Bones loaded for grid %u on map %u", i_gameObjects, i_creatures, i_corpses, i_grid.GetGridId(), i_map->GetId());
+    TC_LOG_DEBUG("maps", "{} GameObjects, {} Creatures, and {} Corpses/Bones loaded for grid {} on map {}", i_gameObjects, i_creatures, i_corpses, i_grid.GetGridId(), i_map->GetId());
 }
 
 template<class T>
@@ -233,9 +185,6 @@ void ObjectGridUnloader::Visit(GridRefManager<T> &m)
     while (!m.isEmpty())
     {
         T *obj = m.getFirst()->GetSource();
-        // if option set then object already saved at this moment
-        if (!sWorld->getBoolConfig(CONFIG_SAVE_RESPAWN_TIME_IMMEDIATELY))
-            obj->SaveRespawnTime();
         //Some creatures may summon other temp summons in CleanupsBeforeDelete()
         //So we need this even after cleaner (maybe we can remove cleaner)
         //Example: Flame Leviathan Turret 33139 is summoned when a creature is deleted
@@ -253,11 +202,7 @@ void ObjectGridStoper::Visit(CreatureMapType &m)
     {
         iter->GetSource()->RemoveAllDynObjects();
         if (iter->GetSource()->IsInCombat())
-        {
             iter->GetSource()->CombatStop();
-            iter->GetSource()->GetThreatManager().ClearAllThreat();
-            iter->GetSource()->AI()->EnterEvadeMode();
-        }
     }
 }
 
