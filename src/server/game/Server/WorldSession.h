@@ -395,7 +395,8 @@ class CharacterCreateInfo
     friend class WorldSession;
     friend class Player;
 
-    protected:
+    // playerbot mod
+    public:
         /// User specified variables
         std::string Name;
         uint8 Race       = 0;
@@ -1050,6 +1051,10 @@ class TC_GAME_API WorldSession
         void HandleAreaSpiritHealerQueueOpcode(WorldPackets::Battleground::AreaSpiritHealerQueue& areaSpiritHealerQueue);
         void HandleHearthAndResurrect(WorldPackets::Battleground::HearthAndResurrect& hearthAndResurrect);
         void HandleRequestBattlefieldStatusOpcode(WorldPackets::Battleground::RequestBattlefieldStatus& requestBattlefieldStatus);
+
+        // playerbot mod
+        void HandleBotPackets();
+        // end of playerbot mod
 
         // Battlefield
         void SendBfInvitePlayerToWar(uint32 battleId, uint32 zoneId, uint32 time);

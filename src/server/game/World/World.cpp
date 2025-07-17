@@ -98,6 +98,11 @@
 
 TC_GAME_API std::atomic<bool> World::m_stopEvent(false);
 TC_GAME_API uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
+// playerbot mod
+#include "../../plugins/ahbot/AhBot.h"
+#include "../../plugins/playerbot/PlayerbotAIConfig.h"
+#include "../../plugins/playerbot/RandomPlayerbotMgr.h"
+
 
 TC_GAME_API std::atomic<uint32> World::m_worldLoopCounter(0);
 
@@ -2217,7 +2222,9 @@ void World::SetInitialWorldSettings()
     Player::DeleteOldCharacters();
 
     TC_LOG_INFO("server.loading", "Initialize AuctionHouseBot...");
-    sAuctionBot->Initialize();
+//    sAuctionBot->Initialize();
+	auctionbot.Init
+	sPlayerbotAIConfig.Initialize();
 
     TC_LOG_INFO("server.loading", "Initializing chat channels...");
     ChannelMgr::LoadFromDB();
@@ -2455,7 +2462,14 @@ void World::Update(uint32 diff)
 
         ///- Handle expired auctions
         sAuctionMgr->Update();
+
+        // ahbot mod
+        auctionbot.Update();
     }
+
+    // playerbot mod
+    sRandomPlayerbotMgr.UpdateAI(diff);
+    sRandomPlayerbotMgr.UpdateSessions(diff);
 
     if (m_timers[WUPDATE_AUCTIONS_PENDING].Passed())
     {
@@ -3057,6 +3071,10 @@ void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std:
         m_ShutdownTimer = time;
         ShutdownMsg(true, nullptr, reason);
     }
+
+    // playerbot mod
+    sRandomPlayerbotMgr.LogoutAllBots();
+    // end of playerbot mod
 
     sScriptMgr->OnShutdownInitiate(ShutdownExitCode(exitcode), ShutdownMask(options));
 }

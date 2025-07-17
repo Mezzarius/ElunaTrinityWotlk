@@ -192,6 +192,16 @@ class TC_GAME_API Group
         bool Create(Player* leader);
         void LoadGroupFromDB(Field* field);
         void LoadMemberFromDB(ObjectGuid::LowType guidLow, uint8 memberFlags, uint8 subgroup, uint8 roles);
+        //npcbot
+        bool Create(Creature* leader);
+        bool AddMember(Creature* creature);
+        void LoadCreatureMemberFromDB(uint32 entry, uint8 memberFlags, uint8 subgroup, uint8 roles);
+        void UpdateBotOutOfRange(Creature* creature);
+        void LinkBotMember(GroupBotReference* bRef);
+        void DelinkBotMember(ObjectGuid guid);
+        GroupBotReference* GetFirstBotMember() { return m_botMemberMgr.getFirst(); }
+        GroupBotReference const* GetFirstBotMember() const { return m_botMemberMgr.getFirst(); }
+        //end npcbot
         bool AddInvite(Player* player);
         void RemoveInvite(Player* player);
         void RemoveAllInvites();
@@ -339,7 +349,16 @@ class TC_GAME_API Group
         // FG: evil hacks
         void BroadcastGroupUpdate(void);
 
+        //npcbots
+        ObjectGuid const* GetTargetIcons() const { return m_targetIcons; }
+        //end npcbots
+
         Trinity::unique_weak_ptr<Group> GetWeakPtr() const { return m_scriptRef; }
+
+        // ai playerbot mod
+        ObjectGuid GetTargetIcon(int index) { return m_targetIcons[index]; }
+        Rolls* GetRolls() { return &RollId; }
+        // end
 
     protected:
         bool _setMembersGroup(ObjectGuid guid, uint8 group);
@@ -354,6 +373,9 @@ class TC_GAME_API Group
 
         MemberSlotList      m_memberSlots;
         GroupRefManager     m_memberMgr;
+        //npcbot
+        GroupBotRefManager  m_botMemberMgr;
+        //end npcbot
         InvitesList         m_invitees;
         ObjectGuid          m_leaderGuid;
         std::string         m_leaderName;

@@ -19,7 +19,7 @@
 #define TRINITYCORE_CHAT_H
 
 #include "Common.h"
-#include "ChatCommand.h"
+#include "ChatCommands/ChatCommand.h"
 #include "ObjectGuid.h"
 #include "SharedDefines.h"
 #include "StringFormat.h"

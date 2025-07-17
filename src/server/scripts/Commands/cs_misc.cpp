@@ -63,6 +63,10 @@
 
 using namespace Trinity::ChatCommands;
 
+#include "../../../plugins/ahbot/AhBot.h"
+#include "../../../plugins/playerbot/playerbot.h"
+#include "../../../plugins/playerbot/GuildTaskMgr.h"
+
 class misc_commandscript : public CommandScript
 {
 public:
@@ -125,6 +129,12 @@ public:
             { "unstuck",          HandleUnstuckCommand,          rbac::RBAC_PERM_COMMAND_UNSTUCK,          Console::Yes },
             { "wchange",          HandleChangeWeather,           rbac::RBAC_PERM_COMMAND_WCHANGE,          Console::No },
             { "mailbox",          HandleMailBoxCommand,          rbac::RBAC_PERM_COMMAND_MAILBOX,          Console::No },
+            // playerbot mod
+            { "ahbot",            rbac::RBAC_PERM_COMMAND_GM       ,          true,  &ahbot::AhBot::HandleAhBotCommand,                      "" },
+            { "rndbot",           rbac::RBAC_PERM_COMMAND_GM       ,          true,  &RandomPlayerbotMgr::HandlePlayerbotConsoleCommand,     "" },
+            { "bot",              195                              ,          false, &PlayerbotMgr::HandlePlayerbotMgrCommand,               "" },
+            { "gtask",            rbac::RBAC_PERM_COMMAND_GM       ,          true,  &GuildTaskMgr::HandleConsoleCommand,           "" },
+ 
         };
         return commandTable;
     }

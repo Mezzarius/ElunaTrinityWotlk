@@ -61,6 +61,13 @@
 #include <boost/circular_buffer.hpp>
 #include <zlib.h>
 
+//npcbot
+#include "botmgr.h"
+//end npcbot
+
+// Playerbot mod
+#include "../../plugins/playerbot/playerbot.h"
+
 namespace {
 
 std::string const DefaultPlayerName = "<none>";
@@ -211,6 +218,13 @@ ObjectGuid::LowType WorldSession::GetGUIDLow() const
 void WorldSession::SendPacket(WorldPacket const* packet)
 {
     ASSERT(packet->GetOpcode() != NULL_OPCODE);
+     // Playerbot mod: send packet to bot AI
+     if (GetPlayer()) {
+         if (GetPlayer()->GetPlayerbotAI())
+             GetPlayer()->GetPlayerbotAI()->HandleBotOutgoingPacket(*packet);
+         else if (GetPlayer()->GetPlayerbotMgr())
+             GetPlayer()->GetPlayerbotMgr()->HandleMasterOutgoingPacket(*packet);
+     }
 
     if (!m_Socket)
         return;
@@ -293,6 +307,8 @@ void WorldSession::LogUnprocessedTail(WorldPacket* packet)
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
+    if (GetPlayer() && GetPlayer()->GetPlayerbotAI()) return true;
+
     ///- Before we process anything:
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)
@@ -367,6 +383,11 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 #endif
                         opHandle->Call(this, *packet);
                         LogUnprocessedTail(packet);
+
+                            // playerbot mod
+                            if (_player && _player->GetPlayerbotMgr())
+                                _player->GetPlayerbotMgr()->HandleMasterIncomingPacket(*packet);
+                            // playerbot mod end
                     }
                     else
                         processedPackets = MAX_PROCESSED_PACKETS_IN_SAME_WORLDSESSION_UPDATE;   // break out of packet processing loop
@@ -471,6 +492,11 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
     TC_METRIC_VALUE("processed_packets", processedPackets);
 
     _recvQueue.readd(requeuePackets.begin(), requeuePackets.end());
+    // playerbot mod
+    if (GetPlayer() && GetPlayer()->GetPlayerbotMgr())
+        GetPlayer()->GetPlayerbotMgr()->UpdateSessions(0);
+    // end of playerbot mod
+
 
     if (!updater.ProcessUnsafe()) // <=> updater is of type MapSessionFilter
     {
@@ -527,10 +553,19 @@ void WorldSession::LogoutPlayer(bool save)
     m_playerLogout = true;
     m_playerSave = save;
 
+    //npcbot - free all bots and remove from botmap
+    _player->RemoveAllBots();
+    //end npcbots
+
     if (_player)
     {
         if (ObjectGuid lguid = _player->GetLootGUID())
             DoLootRelease(lguid);
+
+        // Playerbot mod: log out all player bots owned by this toon
+        if (GetPlayer()->GetPlayerbotMgr())
+            GetPlayer()->GetPlayerbotMgr()->LogoutAllBots();
+        sRandomPlayerbotMgr.OnPlayerLogout(_player);
 
         ///- If the player just died before logging out, make him appear as a ghost
         if (_player->GetDeathTimer())
@@ -613,7 +648,8 @@ void WorldSession::LogoutPlayer(bool save)
         _player->CleanupChannels();
 
         ///- If the player is in a group (or invited), remove him. If the group if then only 1 person, disband the group.
-        _player->UninviteFromGroup();
+        // playerbot mod
+        //_player->UninviteFromGroup();
 
         //! Send update to group and reset stored max enchanting level
         if (Group* group = _player->GetGroup())
@@ -1755,6 +1791,16 @@ uint32 WorldSession::DosProtection::GetMaxPacketCounterAllowed(uint16 opcode) co
             maxPacketCounterAllowed = PLAYER_SLOTS_COUNT;
             break;
         }
+        //npcbot: prevent kicks when too many bots spawned in one spot
+        case CMSG_GET_MIRRORIMAGE_DATA:
+        {
+            if (BotMgr::GetBotInfoPacketsLimit() > -1)
+                maxPacketCounterAllowed = BotMgr::GetBotInfoPacketsLimit();
+            else
+                maxPacketCounterAllowed = 100;
+            break;
+        }
+        //end npcbot
         default:
         {
             maxPacketCounterAllowed = 100;
@@ -1810,4 +1856,17 @@ bool WorldSession::IsRightUnitBeingMoved(ObjectGuid guid)
     }
 
     return true;
+}
+
+void WorldSession::HandleBotPackets()
+{
+    WorldPacket* packet;
+    while (_recvQueue.next(packet))
+    {
+        ClientOpcodeHandler const* opHandle = opcodeTable[static_cast<OpcodeClient>(packet->GetOpcode())];
+        //OpcodeHandler& opHandle = opcodeTable[packet->GetOpcode()];
+        //(this->*opHandle->handler)(*packet);
+        opHandle->Call(this, *packet);
+        delete packet;
+    }
 }
